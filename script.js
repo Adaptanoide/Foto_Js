@@ -6,14 +6,14 @@ const camera = document.getElementById("camera");
 const captureBtn = document.getElementById("capture-btn");
 const canvas = document.getElementById("canvas");
 
-let qrCodeText = ""; // Armazena o número do QR Code
-let smallNumber = ""; // Armazena o número pequeno
-let bigNumber = ""; // Armazena o número grande
+let qrCodeText = ""; 
+let smallNumber = ""; 
+let bigNumber = "";
 
 // Função para extrair o número pequeno (9 primeiros dígitos)
 function extractSmallNumber(qrCode) {
   const parts = qrCode.split(";");
-  const numberField = parts[3]; // Supondo que o campo desejado esteja no índice 3 (4º elemento)
+  const numberField = parts[3]; 
   return numberField ? numberField.slice(0, 9) : "";
 }
 
@@ -42,8 +42,8 @@ qrInput.addEventListener("input", () => {
 navigator.mediaDevices.getUserMedia({
   video: {
     facingMode: { ideal: "environment" },
-    width: { ideal: 1920 },
-    height: { ideal: 1080 }
+    width: { ideal: 1280 },
+    height: { ideal: 720 }
   }
 }).then((stream) => {
   camera.srcObject = stream;
@@ -69,7 +69,7 @@ captureBtn.addEventListener("click", () => {
   tempLink.click();
   document.body.removeChild(tempLink);
 
-  // Prepara para a próxima captura: limpa o campo, os números exibidos e coloca o foco no input
+  // Prepara para a próxima captura
   qrInput.value = '';
   smallNumberDisplay.innerText = "";
   bigNumberDisplay.innerText = "";
