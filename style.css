@@ -18,6 +18,7 @@ html, body {
   padding: 0 10px; /* Distância nas laterais */
 }
 
+/* Número grande no topo */
 #big-number-display {
   position: absolute;
   top: 10px;
@@ -30,13 +31,14 @@ html, body {
   margin: 0;
 }
 
+/* Número pequeno mais afastado e centralizado na tela */
 #small-number-display {
   position: absolute;
-  top: calc(10px + 18vw);
+  top: 50%; /* Centraliza verticalmente */
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%); /* Centraliza totalmente */
   font-family: Arial, sans-serif;
-  font-size: 20px;
+  font-size: 25px;
   color: black;
   font-weight: normal;
   margin: 0;
@@ -78,7 +80,7 @@ main {
   margin-bottom: 10px;
 }
 
-/* Botão de foto pequeno entre o input e o quadro da câmera */
+/* Botão de foto pequeno, entre o input e o quadro da câmera */
 #capture-btn {
   width: 40px;
   height: 40px;
@@ -119,7 +121,7 @@ main {
 
   #small-number-display {
     font-size: 18px;
-    top: calc(10px + 25vw); /* Ajusta a posição para telas pequenas */
+    top: 60%; /* Ajusta o número pequeno para ficar mais para baixo em telas menores */
   }
 
   .action-container input {
