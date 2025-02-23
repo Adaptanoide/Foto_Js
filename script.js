@@ -14,13 +14,17 @@ qrInput.addEventListener("input", () => {
     qrResult.innerText = qrCodeText ? `📌 Código Lido: ${qrCodeText}` : "Aguardando QR Code...";
 });
 
-// Ativa a câmera do dispositivo (garante que a câmera traseira será aberta)
+// Ativa a câmera do dispositivo e tenta obter a maior resolução possível
 navigator.mediaDevices.getUserMedia({
     video: {
-        facingMode: "environment"  // Configura a câmera para a traseira (environment)
+        facingMode: "environment",  // Garante que a câmera traseira será usada
+        width: { ideal: 1920 },     // Tenta definir a maior resolução desejada
+        height: { ideal: 1080 }     // Ajuste dependendo da resolução desejada (pode ser alterado conforme necessário)
     }
 }).then((stream) => {
     camera.srcObject = stream;
+}).catch((error) => {
+    console.error("Erro ao acessar a câmera: ", error);
 });
 
 // Captura a foto e renomeia com o QR Code
