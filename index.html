@@ -1,4 +1,4 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="pt">
 <head>
   <meta charset="UTF-8">
@@ -7,24 +7,21 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-  <!-- Seção branca para exibir os números -->
+  <!-- Área dos números -->
   <div class="top-banner">
     <div id="big-number-display"></div>
     <div id="small-number-display"></div>
   </div>
 
+  <!-- Conteúdo na parte inferior -->
   <main>
-    <!-- Campo de entrada para QR Code -->
-    <div class="input-container">
-      <label for="qr-input">📌 LEIA O QR CODE ABAIXO:</label>
+    <div class="action-container">
       <input type="text" id="qr-input" placeholder="Escaneie o código..." autofocus>
     </div>
 
-    <!-- Botão de captura -->
-    <button id="capture-btn">📷 FOTO</button>
+    <!-- Botão de foto pequeno, agora entre o input e a câmera -->
+    <button id="capture-btn">📷</button>
 
-    <!-- Seção da câmera -->
     <div id="camera-container">
       <video id="camera" autoplay></video>
     </div>
