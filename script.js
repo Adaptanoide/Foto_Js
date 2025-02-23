@@ -1,4 +1,3 @@
-// Captura os elementos do DOM
 const qrInput = document.getElementById("qr-input");
 const smallNumberDisplay = document.getElementById("small-number-display");
 const bigNumberDisplay = document.getElementById("big-number-display");
@@ -10,14 +9,14 @@ let qrCodeText = "";
 let smallNumber = ""; 
 let bigNumber = "";
 
-// Função para extrair o número pequeno (9 primeiros dígitos)
+// Extrai os 9 primeiros dígitos do campo específico do QR
 function extractSmallNumber(qrCode) {
   const parts = qrCode.split(";");
   const numberField = parts[3]; 
   return numberField ? numberField.slice(0, 9) : "";
 }
 
-// Função para extrair os últimos 5 dígitos do número pequeno
+// Extrai os últimos 5 dígitos do número pequeno
 function extractBigNumber(smallNumber) {
   return smallNumber ? smallNumber.slice(-5) : "";
 }
@@ -28,17 +27,15 @@ qrInput.addEventListener("input", () => {
   smallNumber = extractSmallNumber(qrCodeText);
   bigNumber = extractBigNumber(smallNumber);
 
-  // Atualiza as exibições dos números
   smallNumberDisplay.innerText = smallNumber;
   bigNumberDisplay.innerText = bigNumber;
 
-  // Se um QR válido for lido, muda o foco para o botão de tirar foto
   if (smallNumber && bigNumber) {
     captureBtn.focus();
   }
 });
 
-// Ativa a câmera do dispositivo e força o uso da traseira (quando disponível)
+// Ativa a câmera do dispositivo (preferência para traseira)
 navigator.mediaDevices.getUserMedia({
   video: {
     facingMode: { ideal: "environment" },
@@ -61,7 +58,6 @@ captureBtn.addEventListener("click", () => {
 
   const dataUrl = canvas.toDataURL("image/png");
 
-  // Cria um link temporário e dispara o download automaticamente
   const tempLink = document.createElement("a");
   tempLink.href = dataUrl;
   tempLink.download = `${bigNumber || "foto"}.png`;
@@ -69,7 +65,6 @@ captureBtn.addEventListener("click", () => {
   tempLink.click();
   document.body.removeChild(tempLink);
 
-  // Prepara para a próxima captura
   qrInput.value = '';
   smallNumberDisplay.innerText = "";
   bigNumberDisplay.innerText = "";
