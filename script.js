@@ -1,44 +1,63 @@
 // Captura os elementos do DOM
 const qrInput = document.getElementById("qr-input");
-const qrResult = document.getElementById("qr-result");
+const numberDisplay = document.getElementById("number-display");
 const camera = document.getElementById("camera");
 const captureBtn = document.getElementById("capture-btn");
 const canvas = document.getElementById("canvas");
-const downloadLink = document.getElementById("download-link");
 
-let qrCodeText = "foto"; // Nome padrão se não houver QR Code
+let qrCodeText = ""; // Armazena o número extraído do QR Code
 
-// Atualiza o nome do arquivo ao digitar ou escanear o QR Code
+// Função para extrair os últimos 5 dígitos do terceiro campo do QR Code
+function extractQRCodeNumber(qrCode) {
+  const parts = qrCode.split(";");
+  // Supondo que o campo desejado esteja no índice 3 (4º elemento)
+  const numberField = parts[3];
+  return numberField ? numberField.slice(-5) : "";
+}
+
+// Atualiza o número exibido na top-banner ao digitar ou escanear o QR Code
 qrInput.addEventListener("input", () => {
-    qrCodeText = qrInput.value.trim();
-    qrResult.innerText = qrCodeText ? `📌 Código Lido: ${qrCodeText}` : "Aguardando QR Code...";
+  qrCodeText = extractQRCodeNumber(qrInput.value.trim());
+  numberDisplay.innerText = qrCodeText;
+  // Se um QR válido for lido, muda o foco para o botão de tirar foto
+  if (qrCodeText) {
+    captureBtn.focus();
+  }
 });
 
-// Ativa a câmera do dispositivo e tenta obter a maior resolução possível
+// Ativa a câmera do dispositivo e força o uso da traseira (quando disponível)
 navigator.mediaDevices.getUserMedia({
-    video: {
-        facingMode: "environment",  // Garante que a câmera traseira será usada
-        width: { ideal: 1920 },     // Tenta definir a maior resolução desejada
-        height: { ideal: 1080 }     // Ajuste dependendo da resolução desejada (pode ser alterado conforme necessário)
-    }
+  video: {
+    facingMode: { ideal: "environment" },
+    width: { ideal: 1920 },
+    height: { ideal: 1080 }
+  }
 }).then((stream) => {
-    camera.srcObject = stream;
+  camera.srcObject = stream;
 }).catch((error) => {
-    console.error("Erro ao acessar a câmera: ", error);
+  console.error("Erro ao acessar a câmera: ", error);
 });
 
-// Captura a foto e renomeia com o QR Code
+// Captura a foto e inicia o download automaticamente
 captureBtn.addEventListener("click", () => {
-    const context = canvas.getContext("2d");
+  const context = canvas.getContext("2d");
 
-    canvas.width = camera.videoWidth;
-    canvas.height = camera.videoHeight;
-    context.drawImage(camera, 0, 0, canvas.width, canvas.height);
+  canvas.width = camera.videoWidth;
+  canvas.height = camera.videoHeight;
+  context.drawImage(camera, 0, 0, canvas.width, canvas.height);
 
-    const dataUrl = canvas.toDataURL("image/png");
+  const dataUrl = canvas.toDataURL("image/png");
 
-    downloadLink.href = dataUrl;
-    downloadLink.download = `${qrCodeText || "foto"}.png`;
-    downloadLink.style.display = "inline-block";
-    downloadLink.innerText = "📥 Baixar Foto";
+  // Cria um link temporário e dispara o download automaticamente
+  const tempLink = document.createElement("a");
+  tempLink.href = dataUrl;
+  tempLink.download = `${qrCodeText || "foto"}.png`;
+  document.body.appendChild(tempLink);
+  tempLink.click();
+  document.body.removeChild(tempLink);
+
+  // Prepara para a próxima captura: limpa o campo, o número exibido e coloca o foco nele
+  qrInput.value = '';
+  numberDisplay.innerText = "";
+  qrInput.focus();
 });

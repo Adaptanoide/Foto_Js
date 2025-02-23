@@ -1,45 +1,36 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Scanner QR & Captura de Foto</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scanner QR & Captura de Foto</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <header>
-        <h1>📸 Captura de Foto com QR Code</h1>
-    </header>
+  <!-- Seção branca que cobre a largura total, com o número exibido no centro -->
+  <div class="top-banner">
+    <div id="number-display"></div>
+  </div>
 
-    <main>
-        <!-- Campo de entrada para QR Code -->
-        <div class="input-container">
-            <label for="qr-input">📌 Escaneie ou Digite o QR Code:</label>
-            <input type="text" id="qr-input" placeholder="Digite ou escaneie o código..." autofocus>
-        </div>
+  <main>
+    <!-- Campo de entrada para QR Code -->
+    <div class="input-container">
+      <label for="qr-input">📌 LEIA O QR CODE ABAIXO:</label>
+      <input type="text" id="qr-input" placeholder="Escaneie o código..." autofocus>
+    </div>
 
-        <!-- Exibição do QR Code lido -->
-        <div id="qr-result">Aguardando QR Code...</div>
+    <!-- Botão de captura, agora logo abaixo do input -->
+    <button id="capture-btn">📷 FOTO </button>
 
-        <!-- Seção da câmera -->
-        <div id="camera-container">
-            <video id="camera" autoplay></video>
-            <button id="capture-btn">📷 Tirar Foto</button>
-        </div>
+    <!-- Seção da câmera -->
+    <div id="camera-container">
+      <video id="camera" autoplay></video>
+    </div>
 
-        <canvas id="canvas"></canvas>
+    <canvas id="canvas" style="display:none;"></canvas>
+  </main>
 
-        <!-- Link para baixar a foto -->
-        <a id="download-link" style="display:none;" class="btn">📥 Baixar Foto</a>
-    </main>
-
-    <!-- Rodapé -->
-    <footer>
-        Development by <a href="https://github.com/Adaptanoide" target="_blank">Adaptanoide</a>
-    </footer>
-
-    <script src="script.js"></script>
-
+  <script src="script.js"></script>
 </body>
 </html>
