@@ -1,0 +1,123 @@
+/* Estilos gerais */
+body {
+  font-family: 'Arial', sans-serif;
+  text-align: center;
+  background: linear-gradient(to right, #2c3e50, #4ca1af);
+  color: white;
+  margin: 0;
+  padding: 0;
+}
+
+/* Cabeçalho */
+header {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 15px;
+  font-size: 22px;
+}
+
+/* Container principal */
+main {
+  padding: 20px;
+}
+
+/* Campo de entrada */
+.input-container {
+  margin-bottom: 15px;
+}
+
+label {
+  font-size: 18px;
+  display: block;
+  margin-bottom: 5px;
+}
+
+input {
+  font-size: 18px;
+  padding: 10px;
+  width: 90%;
+  max-width: 350px;
+  border: 2px solid #fff;
+  border-radius: 5px;
+  text-align: center;
+  background: #f4f4f4;
+  color: #333;
+}
+
+/* Resultado do QR Code */
+#qr-result {
+  font-size: 22px;
+  font-weight: bold;
+  background: white;
+  color: black;
+  padding: 10px;
+  margin: 15px auto;
+  display: inline-block;
+  border-radius: 5px;
+}
+
+/* Seção da câmera */
+#camera-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 20px;
+}
+
+video {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 10px;
+  border: 3px solid white;
+}
+
+/* Botão de captura */
+button {
+  margin-top: 15px;
+  font-size: 18px;
+  padding: 10px 20px;
+  background: #ff9800;
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: 0.3s;
+}
+
+button:hover {
+  background: #e68900;
+}
+
+/* Link de download */
+.btn {
+  display: inline-block;
+  font-size: 18px;
+  padding: 10px 15px;
+  margin-top: 15px;
+  background: #4caf50;
+  color: white;
+  border-radius: 5px;
+  text-decoration: none;
+  transition: 0.3s;
+}
+
+.btn:hover {
+  background: #45a049;
+}
+
+/* Rodapé */
+footer {
+  margin-top: 30px;
+  padding: 15px;
+  background: rgba(0, 0, 0, 0.3);
+  font-size: 16px;
+}
+
+footer a {
+  color: #f4f4f4;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+footer a:hover {
+  text-decoration: underline;
+}

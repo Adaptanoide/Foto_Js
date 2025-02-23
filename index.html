@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scanner QR & Captura de Foto</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>📸 Captura de Foto com QR Code</h1>
+    </header>
+
+    <main>
+        <!-- Campo de entrada para QR Code -->
+        <div class="input-container">
+            <label for="qr-input">📌 Escaneie ou Digite o QR Code:</label>
+            <input type="text" id="qr-input" placeholder="Digite ou escaneie o código..." autofocus>
+        </div>
+
+        <!-- Exibição do QR Code lido -->
+        <div id="qr-result">Aguardando QR Code...</div>
+
+        <!-- Seção da câmera -->
+        <div id="camera-container">
+            <video id="camera" autoplay></video>
+            <button id="capture-btn">📷 Tirar Foto</button>
+        </div>
+
+        <canvas id="canvas"></canvas>
+
+        <!-- Link para baixar a foto -->
+        <a id="download-link" style="display:none;" class="btn">📥 Baixar Foto</a>
+    </main>
+
+    <!-- Rodapé -->
+    <footer>
+        Development by <a href="https://github.com/Adaptanoide" target="_blank">Adaptanoide</a>
+    </footer>
+
+    <script src="script.js"></script>
+
+</body>
+</html>
