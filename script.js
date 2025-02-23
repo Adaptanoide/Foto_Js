@@ -14,8 +14,12 @@ qrInput.addEventListener("input", () => {
     qrResult.innerText = qrCodeText ? `📌 Código Lido: ${qrCodeText}` : "Aguardando QR Code...";
 });
 
-// Ativa a câmera do dispositivo
-navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
+// Ativa a câmera do dispositivo (garante que a câmera traseira será aberta)
+navigator.mediaDevices.getUserMedia({
+    video: {
+        facingMode: "environment"  // Configura a câmera para a traseira (environment)
+    }
+}).then((stream) => {
     camera.srcObject = stream;
 });
 
