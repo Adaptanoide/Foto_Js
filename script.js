@@ -5,24 +5,22 @@ const camera = document.getElementById("camera");
 const captureBtn = document.getElementById("capture-btn");
 const canvas = document.getElementById("canvas");
 
-let track = null; // Guarda a referência ao vídeo
+let track = null;
 let qrCodeText = "";
 let smallNumber = "";
 let bigNumber = "";
+let captureTimeout = null; // para evitar múltiplas capturas
 
-// Extrai os 9 primeiros dígitos do campo específico do QR
 function extractSmallNumber(qrCode) {
   const parts = qrCode.split(";");
-  const numberField = parts[3]; 
+  const numberField = parts[3];
   return numberField ? numberField.slice(0, 9) : "";
 }
 
-// Extrai os últimos 5 dígitos do número pequeno
 function extractBigNumber(smallNumber) {
   return smallNumber ? smallNumber.slice(-5) : "";
 }
 
-// Atualiza os números exibidos ao digitar ou escanear o QR Code
 qrInput.addEventListener("input", () => {
   qrCodeText = qrInput.value.trim();
   smallNumber = extractSmallNumber(qrCodeText);
@@ -32,40 +30,41 @@ qrInput.addEventListener("input", () => {
   bigNumberDisplay.innerText = bigNumber;
 
   if (smallNumber && bigNumber) {
-    captureBtn.focus();
+    if (captureTimeout) clearTimeout(captureTimeout); // reseta se já tiver um timeout rolando
+
+    captureTimeout = setTimeout(() => {
+      autoCapturePhoto();
+    }, 3000); // espera 3 segundos
   }
 });
 
-// Ativa a câmera com a maior resolução possível
 async function startCamera() {
   try {
     const constraints = {
       video: {
-        facingMode: { ideal: "environment" }, // Usa a câmera traseira
-        width: { ideal: 9999 },  // Pede a resolução máxima
+        facingMode: { ideal: "environment" },
+        width: { ideal: 9999 },
         height: { ideal: 9999 },
-        frameRate: { ideal: 30, max: 60 } // Alta taxa de quadros
+        frameRate: { ideal: 30, max: 60 }
       }
     };
 
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     camera.srcObject = stream;
-    track = stream.getVideoTracks()[0]; // Guarda referência para captura
+    track = stream.getVideoTracks()[0];
   } catch (error) {
     console.error("Erro ao acessar a câmera:", error);
   }
 }
 
-// Captura a foto com a resolução máxima disponível
-captureBtn.addEventListener("click", async () => {
+async function autoCapturePhoto() {
   if (!track) return alert("Câmera não iniciada");
 
   try {
     const imageCapture = new ImageCapture(track);
-    const photo = await imageCapture.takePhoto(); // Captura com qualidade máxima
+    const photo = await imageCapture.takePhoto();
     const imgURL = URL.createObjectURL(photo);
 
-    // Criar link para download automático
     const tempLink = document.createElement("a");
     tempLink.href = imgURL;
     tempLink.download = `${bigNumber || "foto"}.png`;
@@ -73,16 +72,13 @@ captureBtn.addEventListener("click", async () => {
     tempLink.click();
     document.body.removeChild(tempLink);
 
-    // Resetar os campos
     qrInput.value = '';
     smallNumberDisplay.innerText = "";
     bigNumberDisplay.innerText = "";
     qrInput.focus();
-
   } catch (error) {
     console.error("Erro ao capturar foto:", error);
   }
-});
+}
 
-// Inicia a câmera ao carregar a página
 startCamera();

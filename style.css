@@ -75,6 +75,7 @@ main {
 
 /* Botão de captura */
 #capture-btn {
+  display: none;
   width: 40px;
   height: 40px;
   background-color: #f4f4f4;
