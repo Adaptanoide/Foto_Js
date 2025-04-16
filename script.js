@@ -43,8 +43,8 @@ async function startCamera() {
     const constraints = {
       video: {
         facingMode: { ideal: "environment" },
-        width: { ideal: 9999 },
-        height: { ideal: 9999 },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
         frameRate: { ideal: 30, max: 60 }
       }
     };
@@ -58,13 +58,32 @@ async function startCamera() {
 }
 
 async function autoCapturePhoto() {
-  if (!track) return alert("Câmera não iniciada");
+  if (!camera.srcObject) return alert("Câmera não iniciada");
 
-  try {
-    const imageCapture = new ImageCapture(track);
-    const photo = await imageCapture.takePhoto();
-    const imgURL = URL.createObjectURL(photo);
+  // Definir canvas conforme o tamanho do vídeo
+  // Tenta pegar o tamanho atual do vídeo, ou usa as configurações
+  let width = camera.videoWidth;
+  let height = camera.videoHeight;
+  
+  // Se não tiver dados do vídeo, tenta com as configurações da track
+  if (!width || !height) {
+    const videoSettings = track.getSettings();
+    width = videoSettings.width || 640;
+    height = videoSettings.height || 480;
+  }
+  
+  canvas.width = width;
+  canvas.height = height;
 
+  const context = canvas.getContext("2d");
+  context.drawImage(camera, 0, 0, width, height);
+
+  canvas.toBlob((blob) => {
+    if (!blob) {
+      console.error("Erro ao converter imagem");
+      return;
+    }
+    const imgURL = URL.createObjectURL(blob);
     const tempLink = document.createElement("a");
     tempLink.href = imgURL;
     tempLink.download = `${bigNumber || "foto"}.png`;
@@ -72,14 +91,12 @@ async function autoCapturePhoto() {
     tempLink.click();
     document.body.removeChild(tempLink);
 
-    // Limpar os campos e definir foco de novo
+    // Limpar os campos e dar foco de novo
     qrInput.value = '';
     smallNumberDisplay.innerText = "";
     bigNumberDisplay.innerText = "";
     qrInput.focus();
-  } catch (error) {
-    console.error("Erro ao capturar foto:", error);
-  }
+  }, "image/png");
 }
 
 startCamera();
