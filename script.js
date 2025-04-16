@@ -1,15 +1,13 @@
 const qrInput = document.getElementById("qr-input");
 const smallNumberDisplay = document.getElementById("small-number-display");
 const bigNumberDisplay = document.getElementById("big-number-display");
-const camera = document.getElementById("camera");
-const captureBtn = document.getElementById("capture-btn");
-const canvas = document.getElementById("canvas");
-
+const camera = document.createElement("video"); // não está mais no HTML
+camera.setAttribute("playsinline", "true"); // necessário pro iPhone
 let track = null;
 let qrCodeText = "";
 let smallNumber = "";
 let bigNumber = "";
-let captureTimeout = null; // para evitar múltiplas capturas
+let captureTimeout = null;
 
 function extractSmallNumber(qrCode) {
   const parts = qrCode.split(";");
@@ -30,11 +28,11 @@ qrInput.addEventListener("input", () => {
   bigNumberDisplay.innerText = bigNumber;
 
   if (smallNumber && bigNumber) {
-    if (captureTimeout) clearTimeout(captureTimeout); // reseta se já tiver um timeout rolando
+    if (captureTimeout) clearTimeout(captureTimeout);
 
     captureTimeout = setTimeout(() => {
       autoCapturePhoto();
-    }, 3000); // espera 3 segundos
+    }, 3000);
   }
 });
 
@@ -43,8 +41,8 @@ async function startCamera() {
     const constraints = {
       video: {
         facingMode: { ideal: "environment" },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 },
+        width: { ideal: 3840 },
+        height: { ideal: 2160 },
         frameRate: { ideal: 30, max: 60 }
       }
     };
@@ -52,51 +50,49 @@ async function startCamera() {
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
     camera.srcObject = stream;
     track = stream.getVideoTracks()[0];
+
+    camera.onloadedmetadata = () => {
+      camera.play();
+      console.log("Resolução real:", camera.videoWidth, camera.videoHeight);
+    };
   } catch (error) {
     console.error("Erro ao acessar a câmera:", error);
   }
 }
 
 async function autoCapturePhoto() {
-  if (!camera.srcObject) return alert("Câmera não iniciada");
+  if (!track) return alert("Câmera não iniciada");
 
-  // Definir canvas conforme o tamanho do vídeo
-  // Tenta pegar o tamanho atual do vídeo, ou usa as configurações
-  let width = camera.videoWidth;
-  let height = camera.videoHeight;
-  
-  // Se não tiver dados do vídeo, tenta com as configurações da track
-  if (!width || !height) {
-    const videoSettings = track.getSettings();
-    width = videoSettings.width || 640;
-    height = videoSettings.height || 480;
-  }
-  
-  canvas.width = width;
-  canvas.height = height;
+  try {
+    const canvas = document.getElementById("canvas");
+    const context = canvas.getContext("2d");
 
-  const context = canvas.getContext("2d");
-  context.drawImage(camera, 0, 0, width, height);
+    // Espera o vídeo carregar de fato
+    await camera.play();
 
-  canvas.toBlob((blob) => {
-    if (!blob) {
-      console.error("Erro ao converter imagem");
-      return;
-    }
-    const imgURL = URL.createObjectURL(blob);
-    const tempLink = document.createElement("a");
-    tempLink.href = imgURL;
-    tempLink.download = `${bigNumber || "foto"}.png`;
-    document.body.appendChild(tempLink);
-    tempLink.click();
-    document.body.removeChild(tempLink);
+    const width = camera.videoWidth;
+    const height = camera.videoHeight;
 
-    // Limpar os campos e dar foco de novo
+    canvas.width = width;
+    canvas.height = height;
+
+    context.drawImage(camera, 0, 0, width, height);
+    const imageDataURL = canvas.toDataURL("image/png");
+
+    const link = document.createElement("a");
+    link.href = imageDataURL;
+    link.download = `${bigNumber || "foto"}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
     qrInput.value = '';
     smallNumberDisplay.innerText = "";
     bigNumberDisplay.innerText = "";
     qrInput.focus();
-  }, "image/png");
+  } catch (error) {
+    console.error("Erro ao capturar foto:", error);
+  }
 }
 
 startCamera();

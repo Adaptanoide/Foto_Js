@@ -1,34 +1,27 @@
 <!DOCTYPE html>
 <html lang="pt">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Scanner QR & Captura de Fotos</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Área dos números -->
   <div class="top-banner">
     <div id="big-number-display">12345</div>
   </div>
 
-  <!-- Número pequeno no meio da tela -->
   <div class="middle-container">
     <div id="small-number-display">67890</div>
   </div>
 
-  <!-- Conteúdo na parte inferior -->
   <main>
     <div class="action-container">
-      <input type="text" id="qr-input" placeholder="QR CODE" autofocus>
+      <input type="text" id="qr-input" placeholder="QR CODE" autofocus />
     </div>
 
-    <!-- Elemento de vídeo da câmera, necessário para o stream, mas oculto -->
-    <div id="camera-container">
-      <video id="camera" autoplay playsinline></video>
-    </div>
-    
-    <canvas id="canvas" style="display:none;"></canvas>
+    <!-- Canvas invisível para capturar imagem -->
+    <canvas id="canvas" style="display: none;"></canvas>
   </main>
 
   <script src="script.js"></script>
