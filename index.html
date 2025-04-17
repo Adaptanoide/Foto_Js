@@ -18,12 +18,23 @@
   <main>
     <div class="action-container">
       <input type="text" id="qr-input" placeholder="QR CODE" autofocus />
+      <button id="show-photos">📸 Ver Fotos</button>
+      <button id="download-zip">⬇️ Baixar ZIP</button>
     </div>
 
-    <!-- Canvas invisível para capturar imagem -->
+    <video id="camera" autoplay playsinline style="display: none;"></video>
     <canvas id="canvas" style="display: none;"></canvas>
   </main>
 
+  <!-- Modal de galeria -->
+  <div id="photo-modal" class="modal hidden">
+    <div class="modal-content">
+      <button id="close-modal">✖️ Fechar</button>
+      <div id="photo-preview" class="photo-grid"></div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
