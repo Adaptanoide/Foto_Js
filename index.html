@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Scanner QR & Captura de Fotos</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="top-banner">
+    <div id="big-number-display">12345</div>
+  </div>
+
+  <div class="middle-container">
+    <div id="small-number-display">67890</div>
+  </div>
+
+  <main>
+    <div class="action-container">
+      <input type="text" id="qr-input" placeholder="QR CODE" autofocus />
+    </div>
+
+    <!-- Canvas invisível para capturar imagem -->
+    <canvas id="canvas" style="display: none;"></canvas>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background: white;
+  color: black;
+}
+
+.top-banner {
+  width: 100%;
+  padding: 10px 0;
+  background-color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#big-number-display {
+  font-size: 18vw;
+  font-weight: bold;
+  color: black;
+  margin: 0;
+}
+
+.middle-container {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#small-number-display {
+  font-size: 5vw;
+  color: black;
+  font-weight: normal;
+}
+
+main {
+  padding: 10px;
+  background: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.action-container {
+  width: 100%;
+  max-width: 150px;
+  margin: 0 auto 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.action-container input {
+  width: 100%;
+  height: 40px;
+  padding: 8px;
+  border: 2px solid #ccc;
+  border-radius: 5px;
+  font-size: 14px;
+  text-align: center;
+  background: #f4f4f4;
+  color: #333;
+  margin-bottom: 10px;
+}
