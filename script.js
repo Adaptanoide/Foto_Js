@@ -1,25 +1,52 @@
-// script.js
+const startBtn = document.getElementById('start-btn');
+const appContent = document.querySelector('.app-content');
 const qrInput = document.getElementById("qr-input");
 const smallNumberDisplay = document.getElementById("small-number-display");
 const bigNumberDisplay = document.getElementById("big-number-display");
-const canvas = document.getElementById("canvas");
 const camera = document.getElementById("camera");
 const previewContainer = document.getElementById("photo-preview");
 const downloadZipBtn = document.getElementById("download-zip");
 const showPhotosBtn = document.getElementById("show-photos");
 const modal = document.getElementById("photo-modal");
 const closeModal = document.getElementById("close-modal");
-
 const exitModal = document.getElementById("exit-warning-modal");
 const forceExitDownloadBtn = document.getElementById("force-download-exit");
 
 let track = null;
 let photos = {};
-let qrCodeText = "", smallNumber = "", bigNumber = "", captureTimeout = null;
+let captureTimeout = null;
 
+// Controle de Fullscreen
+async function toggleFullscreen() {
+  try {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+      startBtn.classList.add('hidden');
+      appContent.classList.remove('hidden');
+      startCamera();
+    }
+  } catch (err) {
+    alert('Erro ao entrar em tela cheia: ' + err.message);
+  }
+}
+
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) {
+    startBtn.classList.remove('hidden');
+    appContent.classList.add('hidden');
+    if (track) {
+      track.stop();
+      camera.srcObject = null;
+    }
+  }
+});
+
+startBtn.addEventListener('click', toggleFullscreen);
+
+// Funções do scanner QR
 function extractSmallNumber(qrCode) {
   const parts = qrCode.split(";");
-  return parts[3] ? parts[3].slice(0, 9) : "";
+  return parts.length >= 4 && parts[3].length >= 9 ? parts[3].slice(0, 9) : "";
 }
 
 function extractBigNumber(small) {
@@ -27,122 +54,112 @@ function extractBigNumber(small) {
 }
 
 qrInput.addEventListener("input", () => {
-  qrCodeText = qrInput.value.trim();
-  smallNumber = extractSmallNumber(qrCodeText);
-  bigNumber = extractBigNumber(smallNumber);
+  const qrCodeText = qrInput.value.trim();
+  const smallNumber = extractSmallNumber(qrCodeText);
+  const bigNumber = extractBigNumber(smallNumber);
 
-  smallNumberDisplay.innerText = smallNumber;
-  bigNumberDisplay.innerText = bigNumber;
+  smallNumberDisplay.textContent = smallNumber || "Inválido";
+  bigNumberDisplay.textContent = bigNumber || "Inválido";
 
   if (smallNumber && bigNumber) {
-    if (captureTimeout) clearTimeout(captureTimeout);
-    captureTimeout = setTimeout(() => autoCapturePhoto(), 3000);
+    clearTimeout(captureTimeout);
+    captureTimeout = setTimeout(() => autoCapturePhoto(bigNumber), 1500);
   }
 });
 
+// Câmera
 async function startCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode: { ideal: "environment" },
         width: { ideal: 3840 },
-        height: { ideal: 2160 },
-        frameRate: { ideal: 30, max: 60 }
+        height: { ideal: 2160 }
       }
     });
     camera.srcObject = stream;
     track = stream.getVideoTracks()[0];
   } catch (err) {
-    console.error("Error al acceder a la cámara:", err);
+    alert("Erro ao acessar a câmera: " + err.message);
   }
 }
 
-async function autoCapturePhoto() {
-  if (!track) return alert("Cámara no iniciada");
+// Captura de foto
+async function autoCapturePhoto(currentBigNumber) {
+  if (!track) return;
 
-  await camera.play();
   const width = camera.videoWidth;
   const height = camera.videoHeight;
-
+  
+  const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(camera, 0, 0, width, height);
+  canvas.getContext('2d').drawImage(camera, 0, 0, width, height);
 
-  const imageDataURL = canvas.toDataURL("image/png");
-  const filename = `${bigNumber}.png`;
+  const filename = `${currentBigNumber}.png`;
+  photos[filename] = canvas.toDataURL("image/png");
 
-  photos[filename] = imageDataURL;
-
-  setTimeout(() => {
-    qrInput.value = '';
-    smallNumberDisplay.innerText = "";
-    bigNumberDisplay.innerText = "";
-    qrInput.focus();
-  }, 500);
+  qrInput.value = '';
+  smallNumberDisplay.textContent = "-----";
+  bigNumberDisplay.textContent = "----";
+  qrInput.focus();
 }
 
-function downloadPhotosZip() {
-  if (Object.keys(photos).length === 0) return alert("¡No hay fotos para descargar!");
-
+// Galeria e ZIP
+downloadZipBtn.addEventListener("click", () => {
+  if (!Object.keys(photos).length) return alert("Nenhuma foto para baixar!");
+  
   const zip = new JSZip();
   for (const [filename, dataURL] of Object.entries(photos)) {
     zip.file(filename, dataURL.split(",")[1], { base64: true });
   }
 
-  zip.generateAsync({ type: "blob" }).then(content => {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(content);
-    a.download = "fotos.zip";
-    a.click();
+  zip.generateAsync({ type: "blob" }).then(blob => {
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "fotos.zip";
+    link.click();
   });
-}
-
-downloadZipBtn.addEventListener("click", downloadPhotosZip);
+});
 
 showPhotosBtn.addEventListener("click", () => {
-  previewContainer.innerHTML = "";
-
-  for (const [filename, dataURL] of Object.entries(photos)) {
-    const container = document.createElement("div");
-    container.classList.add("photo-item");
-
-    const img = document.createElement("img");
-    img.src = dataURL;
-    img.alt = filename;
-
-    const caption = document.createElement("span");
-    caption.innerText = filename.replace(".png", "");
-
-    container.appendChild(img);
-    container.appendChild(caption);
-    previewContainer.appendChild(container);
-  }
-
+  previewContainer.innerHTML = Object.entries(photos).map(([name, src]) => `
+    <div class="photo-item">
+      <img src="${src}" alt="${name}">
+      <span>${name.replace('.png', '')}</span>
+      <button onclick="deletePhoto('${name}')">🗑️ Excluir</button>
+    </div>
+  `).join('');
   modal.classList.remove("hidden");
 });
 
-closeModal.addEventListener("click", () => {
-  modal.classList.add("hidden");
-});
+function deletePhoto(filename) {
+  delete photos[filename];
+  const photoItem = [...previewContainer.children].find(item => 
+    item.querySelector('span').textContent === filename.replace('.png', '')
+  );
+  if (photoItem) photoItem.remove();
+}
 
-// Protección al intentar salir de la página
+// Controle de modais
+closeModal.addEventListener("click", () => modal.classList.add("hidden"));
 window.addEventListener("beforeunload", (e) => {
-  if (Object.keys(photos).length > 0) {
+  if (Object.keys(photos).length) {
     e.preventDefault();
     e.returnValue = "";
     exitModal.classList.remove("hidden");
-    return "";
   }
 });
 
 forceExitDownloadBtn.addEventListener("click", () => {
-  downloadPhotosZip();
-  setTimeout(() => {
-    exitModal.classList.add("hidden");
-    window.removeEventListener("beforeunload", () => {});
-    window.location.reload();
-  }, 1000);
+  downloadZipBtn.click();
+  exitModal.classList.add("hidden");
+  photos = {};
 });
 
-startCamera();
+// Fechar modal ao clicar fora
+exitModal.addEventListener('click', (e) => {
+  if (e.target === exitModal) {
+    exitModal.classList.add("hidden");
+  }
+});

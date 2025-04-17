@@ -1,17 +1,44 @@
-/* style.css */
 html, body {
   height: 100%;
   margin: 0;
-  display: flex;
-  flex-direction: column;
   font-family: Arial, sans-serif;
-  text-align: center;
   background: white;
   color: black;
 }
 
-.top-banner {
+.fullscreen-btn {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
+  height: 100%;
+  background: #2196F3;
+  color: white;
+  border: none;
+  font-size: 2em;
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background 0.3s;
+}
+
+.fullscreen-btn:hover {
+  background: #1976D2;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.app-content {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.top-banner {
   padding: 10px 0;
   background-color: white;
   display: flex;
@@ -23,7 +50,6 @@ html, body {
   font-size: 18vw;
   font-weight: bold;
   color: black;
-  margin: 0;
 }
 
 .middle-container {
@@ -36,7 +62,6 @@ html, body {
 #small-number-display {
   font-size: 5vw;
   color: black;
-  font-weight: normal;
 }
 
 main {
@@ -64,7 +89,6 @@ main {
   border: 2px solid #ccc;
 }
 
-/* Modal */
 .modal {
   position: fixed;
   top: 0;
@@ -75,11 +99,7 @@ main {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 999;
-}
-
-.hidden {
-  display: none;
+  z-index: 1001;
 }
 
 .modal-content {
@@ -92,18 +112,6 @@ main {
   text-align: center;
 }
 
-.modal-content button {
-  margin-bottom: 10px;
-  padding: 8px 12px;
-  font-size: 14px;
-  background-color: #f44;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-/* Galería */
 .photo-grid {
   display: flex;
   flex-wrap: wrap;
@@ -124,17 +132,12 @@ main {
   border-radius: 5px;
 }
 
-.photo-item span {
+.photo-item button {
   margin-top: 5px;
-  font-size: 14px;
-  font-weight: bold;
-  color: #333;
-}
-
-/* Modal de aviso al salir */
-#exit-warning-modal p {
-  font-size: 18px;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 20px;
+  padding: 5px 10px;
+  background: #ff4444;
+  color: white;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
 }
