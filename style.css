@@ -1,3 +1,4 @@
+/* style.css */
 html, body {
   height: 100%;
   margin: 0;
@@ -54,7 +55,8 @@ main {
   width: 100%;
 }
 
-.action-container input, .action-container button {
+.action-container input,
+.action-container button {
   height: 40px;
   padding: 8px;
   font-size: 14px;
@@ -101,7 +103,7 @@ main {
   cursor: pointer;
 }
 
-/* Galeria */
+/* Galería */
 .photo-grid {
   display: flex;
   flex-wrap: wrap;
@@ -127,4 +129,12 @@ main {
   font-size: 14px;
   font-weight: bold;
   color: #333;
+}
+
+/* Modal de aviso al salir */
+#exit-warning-modal p {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 20px;
 }

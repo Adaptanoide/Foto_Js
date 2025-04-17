@@ -1,3 +1,4 @@
+// script.js
 const qrInput = document.getElementById("qr-input");
 const smallNumberDisplay = document.getElementById("small-number-display");
 const bigNumberDisplay = document.getElementById("big-number-display");
@@ -9,8 +10,11 @@ const showPhotosBtn = document.getElementById("show-photos");
 const modal = document.getElementById("photo-modal");
 const closeModal = document.getElementById("close-modal");
 
+const exitModal = document.getElementById("exit-warning-modal");
+const forceExitDownloadBtn = document.getElementById("force-download-exit");
+
 let track = null;
-let photos = {}; // { "12345.png": "data:image/png;base64,...", ... }
+let photos = {};
 let qrCodeText = "", smallNumber = "", bigNumber = "", captureTimeout = null;
 
 function extractSmallNumber(qrCode) {
@@ -49,12 +53,12 @@ async function startCamera() {
     camera.srcObject = stream;
     track = stream.getVideoTracks()[0];
   } catch (err) {
-    console.error("Erro ao acessar a câmera:", err);
+    console.error("Error al acceder a la cámara:", err);
   }
 }
 
 async function autoCapturePhoto() {
-  if (!track) return alert("Câmera não iniciada");
+  if (!track) return alert("Cámara no iniciada");
 
   await camera.play();
   const width = camera.videoWidth;
@@ -78,8 +82,8 @@ async function autoCapturePhoto() {
   }, 500);
 }
 
-downloadZipBtn.addEventListener("click", () => {
-  if (Object.keys(photos).length === 0) return alert("Nenhuma foto para baixar!");
+function downloadPhotosZip() {
+  if (Object.keys(photos).length === 0) return alert("¡No hay fotos para descargar!");
 
   const zip = new JSZip();
   for (const [filename, dataURL] of Object.entries(photos)) {
@@ -92,7 +96,9 @@ downloadZipBtn.addEventListener("click", () => {
     a.download = "fotos.zip";
     a.click();
   });
-});
+}
+
+downloadZipBtn.addEventListener("click", downloadPhotosZip);
 
 showPhotosBtn.addEventListener("click", () => {
   previewContainer.innerHTML = "";
@@ -118,6 +124,25 @@ showPhotosBtn.addEventListener("click", () => {
 
 closeModal.addEventListener("click", () => {
   modal.classList.add("hidden");
+});
+
+// Protección al intentar salir de la página
+window.addEventListener("beforeunload", (e) => {
+  if (Object.keys(photos).length > 0) {
+    e.preventDefault();
+    e.returnValue = "";
+    exitModal.classList.remove("hidden");
+    return "";
+  }
+});
+
+forceExitDownloadBtn.addEventListener("click", () => {
+  downloadPhotosZip();
+  setTimeout(() => {
+    exitModal.classList.add("hidden");
+    window.removeEventListener("beforeunload", () => {});
+    window.location.reload();
+  }, 1000);
 });
 
 startCamera();

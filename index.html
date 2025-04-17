@@ -1,9 +1,10 @@
+<!-- index.html -->
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Scanner QR & Captura de Fotos</title>
+  <title>Escáner QR y Captura de Fotos</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -17,20 +18,28 @@
 
   <main>
     <div class="action-container">
-      <input type="text" id="qr-input" placeholder="QR CODE" autofocus />
-      <button id="show-photos">📸 Ver Fotos</button>
-      <button id="download-zip">⬇️ Baixar ZIP</button>
+      <input type="text" id="qr-input" placeholder="CÓDIGO QR" autofocus />
+      <button id="show-photos">📸 Ver fotos</button>
+      <button id="download-zip">⬇️ Descargar ZIP</button>
     </div>
 
     <video id="camera" autoplay playsinline style="display: none;"></video>
     <canvas id="canvas" style="display: none;"></canvas>
   </main>
 
-  <!-- Modal de galeria -->
+  <!-- Modal de galería -->
   <div id="photo-modal" class="modal hidden">
     <div class="modal-content">
-      <button id="close-modal">✖️ Fechar</button>
+      <button id="close-modal">✖️ Cerrar</button>
       <div id="photo-preview" class="photo-grid"></div>
+    </div>
+  </div>
+
+  <!-- Modal de aviso al intentar salir -->
+  <div id="exit-warning-modal" class="modal hidden">
+    <div class="modal-content">
+      <p>⚠️ ¡Puede perder las fotos tomadas si sale ahora!</p>
+      <button id="force-download-exit">⬇️ Descargar fotos</button>
     </div>
   </div>
 
