@@ -7,18 +7,18 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Modal de aviso al salir -->
   <div id="exit-warning-modal" class="modal hidden">
     <div class="modal-content">
       <p>⚠️ ¡Puede perder las fotos tomadas si sale ahora!</p>
-      <button id="force-download-exit">⬇️ Descargar fotos</button>
+      <div class="modal-buttons">
+        <button id="force-download-exit">⬇️ Descargar fotos</button>
+        <button id="return-to-app">↩️ Volver</button>
+      </div>
     </div>
   </div>
 
-  <!-- Botón de inicio -->
-  <button id="start-btn" class="fullscreen-btn">INICIAR ESCANEAMENTO</button>
+  <button id="start-btn" class="fullscreen-btn">CLICK TO START</button>
 
-  <!-- Contenido principal -->
   <div class="app-content hidden">
     <div class="top-banner">
       <div id="big-number-display">----</div>
@@ -30,19 +30,24 @@
 
     <main>
       <div class="action-container">
-        <input type="text" id="qr-input" placeholder="CÓDIGO QR" autofocus />
-        <button id="show-photos">📸 Ver fotos</button>
-        <button id="download-zip">⬇️ Descargar ZIP</button>
+        <input type="text" id="qr-input" placeholder="Scanner..." autofocus />
+        
+        <div class="menu-wrapper">
+          <button id="menu-toggle" class="menu-toggle"></button>
+          <div class="buttons-container collapsed">
+            <button id="show-photos">📸 Ver fotos</button>
+            <button id="download-zip">⬇️ Descargar ZIP</button>
+          </div>
+        </div>
       </div>
 
       <video id="camera" autoplay playsinline style="display: none;"></video>
       <canvas id="canvas" style="display: none;"></canvas>
     </main>
 
-    <!-- Modal de galería -->
     <div id="photo-modal" class="modal hidden">
       <div class="modal-content">
-        <button id="close-modal">✖️ Cerrar</button>
+        <button id="close-modal">↩️ Volver</button>
         <div id="photo-preview" class="photo-grid"></div>
       </div>
     </div>

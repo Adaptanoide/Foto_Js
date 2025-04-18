@@ -80,13 +80,90 @@ main {
   width: 100%;
 }
 
-.action-container input,
-.action-container button {
+.action-container input {
   height: 40px;
   padding: 8px;
   font-size: 14px;
   border-radius: 5px;
-  border: 2px solid #ccc;
+  border: 2px solid rgba(204, 204, 204, 0.3) !important;
+  width: 100%;
+  outline: none !important;
+  transition: border 0.2s ease;
+}
+
+.action-container input:focus {
+  border: 2px solid rgba(204, 204, 204, 0.5) !important;
+  box-shadow: none !important;
+}
+
+.menu-wrapper {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.menu-toggle {
+  width: 40px;
+  height: 40px;
+  background: rgba(240,240,240,0.3);
+  border: 2px solid rgba(204, 204, 204, 0.3);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.menu-toggle::before {
+  content: "☰";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 20px;
+  color: rgba(0, 0, 0, 0.5); /* Ícone mais suave */
+}
+
+.menu-toggle:hover {
+  background: rgba(240,240,240,0.6);
+  border: 2px solid rgba(204, 204, 204, 0.6);
+  transform: scale(1.1);
+}
+
+.menu-toggle:hover::before {
+  color: rgba(0, 0, 0, 0.8); /* Ícone mais visível no hover */
+}
+
+.menu-toggle.active::before {
+  content: "✕";
+}
+
+.buttons-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-height: 1000px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.buttons-container.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-top: -10px;
+}
+
+.buttons-container button {
+  height: 40px;
+  padding: 8px;
+  font-size: 14px;
+  border-radius: 5px;
+  border: 2px solid rgba(204, 204, 204, 0.3);
+  width: 100%;
+  transition: all 0.2s;
+}
+
+.buttons-container button:hover {
+  border-color: rgba(204, 204, 204, 0.6);
 }
 
 .modal {
@@ -112,6 +189,29 @@ main {
   text-align: center;
 }
 
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+#force-download-exit {
+  background: #4CAF50;
+  color: white;
+  border: none;
+}
+
+#return-to-app {
+  background: #FFD700;
+  color: #000;
+  border: 2px solid #FFA500;
+}
+
+#return-to-app:hover {
+  background: #FFA500;
+}
+
 .photo-grid {
   display: flex;
   flex-wrap: wrap;
@@ -128,7 +228,7 @@ main {
 .photo-item img {
   width: 140px;
   height: auto;
-  border: 2px solid #ccc;
+  border: 2px solid rgba(204, 204, 204, 0.3);
   border-radius: 5px;
 }
 

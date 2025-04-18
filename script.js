@@ -11,10 +11,14 @@ const modal = document.getElementById("photo-modal");
 const closeModal = document.getElementById("close-modal");
 const exitModal = document.getElementById("exit-warning-modal");
 const forceExitDownloadBtn = document.getElementById("force-download-exit");
+const menuToggle = document.getElementById('menu-toggle');
+const buttonsContainer = document.querySelector('.buttons-container');
+const returnToAppBtn = document.getElementById('return-to-app');
 
 let track = null;
 let photos = {};
 let captureTimeout = null;
+let menuCollapsed = true;
 
 // Controle de Fullscreen
 async function toggleFullscreen() {
@@ -42,6 +46,13 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 startBtn.addEventListener('click', toggleFullscreen);
+
+// Controle do Menu
+menuToggle.addEventListener('click', () => {
+  menuCollapsed = !menuCollapsed;
+  buttonsContainer.classList.toggle('collapsed', menuCollapsed);
+  menuToggle.classList.toggle('active', !menuCollapsed);
+});
 
 // Funções do scanner QR
 function extractSmallNumber(qrCode) {
@@ -157,7 +168,10 @@ forceExitDownloadBtn.addEventListener("click", () => {
   photos = {};
 });
 
-// Fechar modal ao clicar fora
+returnToAppBtn.addEventListener('click', () => {
+  exitModal.classList.add("hidden");
+});
+
 exitModal.addEventListener('click', (e) => {
   if (e.target === exitModal) {
     exitModal.classList.add("hidden");
