@@ -21,7 +21,7 @@ let captureTimeout = null;
 let menuCollapsed = true;
 let hasDownloaded = false;
 
-// Controle de Fullscreen
+// Fullscreen
 async function toggleFullscreen() {
   try {
     if (!document.fullscreenElement) {
@@ -48,14 +48,14 @@ document.addEventListener('fullscreenchange', () => {
 
 startBtn.addEventListener('click', toggleFullscreen);
 
-// Controle do Menu
+// Menu toggle
 menuToggle.addEventListener('click', () => {
   menuCollapsed = !menuCollapsed;
   buttonsContainer.classList.toggle('collapsed', menuCollapsed);
   menuToggle.classList.toggle('active', !menuCollapsed);
 });
 
-// Funções do scanner QR
+// QR scanner helpers
 function extractSmallNumber(qrCode) {
   const parts = qrCode.split(";");
   return parts.length >= 4 && parts[3].length >= 9 ? parts[3].slice(0, 9) : "";
@@ -79,7 +79,7 @@ qrInput.addEventListener("input", () => {
   }
 });
 
-// Câmera
+// Camera start
 async function startCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -96,7 +96,7 @@ async function startCamera() {
   }
 }
 
-// Captura de foto
+// Auto-capture e salva JPEG
 async function autoCapturePhoto(currentBigNumber) {
   if (!track) return;
 
@@ -108,8 +108,9 @@ async function autoCapturePhoto(currentBigNumber) {
   canvas.height = height;
   canvas.getContext('2d').drawImage(camera, 0, 0, width, height);
 
-  const filename = `${currentBigNumber}.png`;
-  photos[filename] = canvas.toDataURL("image/png");
+  const filename = `${currentBigNumber}.jpg`;
+  // qualidade 0.0 a 1.0 (use .92 pra ótimo equilíbrio)
+  photos[filename] = canvas.toDataURL("image/jpeg", 0.92);
   hasDownloaded = false;
 
   qrInput.value = '';
@@ -118,7 +119,7 @@ async function autoCapturePhoto(currentBigNumber) {
   qrInput.focus();
 }
 
-// Galeria e ZIP
+// Download ZIP
 downloadZipBtn.addEventListener("click", () => {
   if (!Object.keys(photos).length) return alert("Nenhuma foto para baixar!");
   
@@ -133,7 +134,7 @@ downloadZipBtn.addEventListener("click", () => {
     link.download = "fotos.zip";
     link.click();
     
-    // Limpeza completa após download
+    // reset
     photos = {};
     hasDownloaded = true;
     smallNumberDisplay.textContent = "-----";
@@ -143,26 +144,28 @@ downloadZipBtn.addEventListener("click", () => {
   });
 });
 
+// Mostrar galeria
 showPhotosBtn.addEventListener("click", () => {
   previewContainer.innerHTML = Object.entries(photos).map(([name, src]) => `
     <div class="photo-item">
       <img src="${src}" alt="${name}">
-      <span>${name.replace('.png', '')}</span>
+      <span>${name.replace('.jpg', '')}</span>
       <button onclick="deletePhoto('${name}')">🗑️ Excluir</button>
     </div>
   `).join('');
   modal.classList.remove("hidden");
 });
 
+// Deletar uma foto
 function deletePhoto(filename) {
   delete photos[filename];
   const photoItem = [...previewContainer.children].find(item => 
-    item.querySelector('span').textContent === filename.replace('.png', '')
+    item.querySelector('span').textContent === filename.replace('.jpg', '')
   );
   if (photoItem) photoItem.remove();
 }
 
-// Controle de modais
+// Modais de aviso
 closeModal.addEventListener("click", () => modal.classList.add("hidden"));
 window.addEventListener("beforeunload", (e) => {
   if (!hasDownloaded && Object.keys(photos).length > 0) {
@@ -171,18 +174,11 @@ window.addEventListener("beforeunload", (e) => {
     exitModal.classList.remove("hidden");
   }
 });
-
 forceExitDownloadBtn.addEventListener("click", () => {
   downloadZipBtn.click();
   exitModal.classList.add("hidden");
 });
-
-returnToAppBtn.addEventListener('click', () => {
-  exitModal.classList.add("hidden");
-});
-
+returnToAppBtn.addEventListener('click', () => exitModal.classList.add('hidden'));
 exitModal.addEventListener('click', (e) => {
-  if (e.target === exitModal) {
-    exitModal.classList.add("hidden");
-  }
+  if (e.target === exitModal) exitModal.classList.add('hidden');
 });
