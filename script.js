@@ -19,6 +19,7 @@ let track = null;
 let photos = {};
 let captureTimeout = null;
 let menuCollapsed = true;
+let hasDownloaded = false;
 
 // Controle de Fullscreen
 async function toggleFullscreen() {
@@ -109,6 +110,7 @@ async function autoCapturePhoto(currentBigNumber) {
 
   const filename = `${currentBigNumber}.png`;
   photos[filename] = canvas.toDataURL("image/png");
+  hasDownloaded = false;
 
   qrInput.value = '';
   smallNumberDisplay.textContent = "-----";
@@ -130,6 +132,14 @@ downloadZipBtn.addEventListener("click", () => {
     link.href = URL.createObjectURL(blob);
     link.download = "fotos.zip";
     link.click();
+    
+    // Limpeza completa após download
+    photos = {};
+    hasDownloaded = true;
+    smallNumberDisplay.textContent = "-----";
+    bigNumberDisplay.textContent = "----";
+    previewContainer.innerHTML = "";
+    if (!modal.classList.contains('hidden')) modal.classList.add('hidden');
   });
 });
 
@@ -155,7 +165,7 @@ function deletePhoto(filename) {
 // Controle de modais
 closeModal.addEventListener("click", () => modal.classList.add("hidden"));
 window.addEventListener("beforeunload", (e) => {
-  if (Object.keys(photos).length) {
+  if (!hasDownloaded && Object.keys(photos).length > 0) {
     e.preventDefault();
     e.returnValue = "";
     exitModal.classList.remove("hidden");
@@ -165,7 +175,6 @@ window.addEventListener("beforeunload", (e) => {
 forceExitDownloadBtn.addEventListener("click", () => {
   downloadZipBtn.click();
   exitModal.classList.add("hidden");
-  photos = {};
 });
 
 returnToAppBtn.addEventListener('click', () => {
