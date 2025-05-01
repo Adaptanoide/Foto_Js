@@ -1419,7 +1419,7 @@ function updateCanvasDimensions() {
   });
 }
 
-// NUEVA FUNCIÓN: Actualizar el visor de la cámara para que coincida con la proporción de captura
+// FUNÇÃO ATUALIZADA: Visualização da área de captura
 function updateCameraViewport() {
   const { camera } = domElements.iphone;
   if (!camera || !appState.mediaStream) return;
@@ -1481,7 +1481,7 @@ function updateCameraViewport() {
     viewportGuide.appendChild(guideText);
   }
   
-  // Também modificar o object-fit do vídeo para conter em vez de cover
+  // Modificar o object-fit do vídeo para conter em vez de cover
   camera.style.objectFit = 'contain';
 }
 
@@ -1641,7 +1641,7 @@ async function optimizeCameraSettings(stream) {
   }
 }
 
-// FUNCIÓN ACTUALIZADA: Capturar imagen en alta calidad (4032x3024)
+// VERSÃO CORRIGIDA: Capturar imagem em alta qualidade
 function captureHighQualityImage(sourceElement) {
   return new Promise((resolve, reject) => {
     try {
@@ -1649,9 +1649,6 @@ function captureHighQualityImage(sourceElement) {
       if (!canvas) {
         throw new Error('Canvas no disponible');
       }
-      
-      // Obter o viewport guide para saber a área visível
-      const viewportGuide = document.getElementById('viewport-guide');
       
       // Verificar disponibilidade do video e dimensões
       const videoWidth = sourceElement.videoWidth;
@@ -1685,43 +1682,36 @@ function captureHighQualityImage(sourceElement) {
       // Limpiar canvas antes de dibujar
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Calcular a área visível na tela
-      const videoAspect = videoWidth / videoHeight;
-      const screenAspect = window.innerWidth / window.innerHeight;
-      
-      // Calcular dimensões do vídeo visível com objectFit="contain"
-      let visibleWidth, visibleHeight;
-      if (videoAspect > screenAspect) {
-        visibleWidth = window.innerWidth;
-        visibleHeight = window.innerWidth / videoAspect;
-      } else {
-        visibleHeight = window.innerHeight;
-        visibleWidth = window.innerHeight * videoAspect;
-      }
-      
-      // Calcular área que será capturada (mesma área do viewport guide)
-      let captureWidth, captureHeight;
+      // Usar o código original para captura, que sabemos que funciona
+      // Calcular dimensiones preservando al máximo la resolución
+      // Usar el máximo de la resolución disponible del video
+      const sourceRatio = videoWidth / videoHeight;
       const targetRatio = TARGET_WIDTH / TARGET_HEIGHT;
       
-      if (screenAspect > targetRatio) {
-        captureHeight = window.innerHeight;
-        captureWidth = captureHeight * targetRatio;
-      } else {
-        captureWidth = window.innerWidth;
-        captureHeight = captureWidth / targetRatio;
+      // Variables para el recorte
+      let sx = 0, sy = 0, sw = videoWidth, sh = videoHeight;
+      
+      // Calcular el recorte con mayor precisión
+      if (Math.abs(sourceRatio - targetRatio) > 0.001) {
+        if (sourceRatio > targetRatio) {
+          // Video es más ancho, recortar en los laterales
+          sw = videoHeight * targetRatio;
+          sx = Math.floor((videoWidth - sw) / 2);
+        } else {
+          // Video es más alto, recortar arriba/abajo
+          sh = videoWidth / targetRatio;
+          sy = Math.floor((videoHeight - sh) / 2);
+        }
       }
       
-      // Calcular as coordenadas no vídeo original
-      const scaleX = videoWidth / visibleWidth;
-      const scaleY = videoHeight / visibleHeight;
+      // Usar números enteros para evitar cálculos subpixel
+      sx = Math.floor(sx);
+      sy = Math.floor(sy);
+      sw = Math.floor(sw);
+      sh = Math.floor(sh);
       
-      const leftOffset = (window.innerWidth - captureWidth) / 2;
-      const topOffset = (window.innerHeight - captureHeight) / 2;
-      
-      const sx = Math.max(0, leftOffset * scaleX);
-      const sy = Math.max(0, topOffset * scaleY);
-      const sw = Math.min(videoWidth, captureWidth * scaleX);
-      const sh = Math.min(videoHeight, captureHeight * scaleY);
+      // Mostrar na console para debug
+      console.log(`Capturando área: sx=${sx}, sy=${sy}, sw=${sw}, sh=${sh}`);
       
       // Dibujar en el canvas, preservando la calidad máxima
       ctx.drawImage(
