@@ -1,5 +1,5 @@
 // === CONFIG Google API ===
-const CLIENT_ID = '209622447692-eev27ais29mr9rno1jfjh9tc5budni4.apps.googleusercontent.com';
+const CLIENT_ID = '209622447692-eev27ais29mr9rn8o1jfjh9tc5budni4.apps.googleusercontent.com';
 const FOLDER_ID = '1PoWXuFHe0-AXKLTbQlWu0NmEG3aC-ZxP';
 const API_KEY = ''; // Agregue su API_KEY si es necesario
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
@@ -1396,30 +1396,7 @@ function handleAuthClick() {
   }
 }
 
-// Actualizar dimensiones del canvas
-function updateCanvasDimensions() {
-  const { camera, canvas } = domElements.iphone;
-  
-  if (!camera || !camera.videoWidth || !camera.videoHeight || !canvas) return;
-  
-  // Asegurar que el canvas tenga las dimensiones objetivo para captura de alta calidad
-  canvas.width = TARGET_WIDTH;
-  canvas.height = TARGET_HEIGHT;
-  
-  // Verificar si las dimensiones del video son menores que el objetivo (posible limitación del dispositivo)
-  if (camera.videoWidth < TARGET_WIDTH || camera.videoHeight < TARGET_HEIGHT) {
-    console.warn(`Alerta: Dimensiones del video (${camera.videoWidth}x${camera.videoHeight}) son menores que el objetivo (${TARGET_WIDTH}x${TARGET_HEIGHT}). La calidad puede estar limitada por el hardware.`);
-  }
-  
-  debugLog('Canvas configurado con dimensiones:', {
-    width: canvas.width,
-    height: canvas.height,
-    videoWidth: camera.videoWidth,
-    videoHeight: camera.videoHeight
-  });
-}
-
-// FUNÇÃO ATUALIZADA: Visualização da área de captura
+// NOVA FUNÇÃO: Visualização da área de captura
 function updateCameraViewport() {
   const { camera } = domElements.iphone;
   if (!camera || !appState.mediaStream) return;
@@ -1481,7 +1458,7 @@ function updateCameraViewport() {
     viewportGuide.appendChild(guideText);
   }
   
-  // Modificar o object-fit do vídeo para conter em vez de cover
+  // Modificar o object-fit do vídeo para contain em vez de cover
   camera.style.objectFit = 'contain';
 }
 
@@ -1540,10 +1517,10 @@ async function setupCamera() {
       // Intentar aplicar configuraciones avanzadas
       await optimizeCameraSettings(stream);
       
-      // Atualizar dimensiones del canvas
+      // Actualizar dimensiones del canvas
       updateCanvasDimensions();
       
-      // AQUÍ LA NUEVA LÍNEA: Atualizar el viewport de la cámara
+      // CHAMADA PARA NOVA FUNÇÃO: Atualizar o viewport da câmera
       updateCameraViewport();
       
       updateCameraStatus('Cámara lista');
@@ -1641,7 +1618,30 @@ async function optimizeCameraSettings(stream) {
   }
 }
 
-// VERSÃO CORRIGIDA: Capturar imagem em alta qualidade
+// Actualizar dimensiones del canvas basado en el video actual
+function updateCanvasDimensions() {
+  const { camera, canvas } = domElements.iphone;
+  
+  if (!camera || !camera.videoWidth || !camera.videoHeight || !canvas) return;
+  
+  // Asegurar que el canvas tenga las dimensiones objetivo para captura de alta calidad
+  canvas.width = TARGET_WIDTH;
+  canvas.height = TARGET_HEIGHT;
+  
+  // Verificar si las dimensiones del video son menores que el objetivo (posible limitación del dispositivo)
+  if (camera.videoWidth < TARGET_WIDTH || camera.videoHeight < TARGET_HEIGHT) {
+    console.warn(`Alerta: Dimensiones del video (${camera.videoWidth}x${camera.videoHeight}) son menores que el objetivo (${TARGET_WIDTH}x${TARGET_HEIGHT}). La calidad puede estar limitada por el hardware.`);
+  }
+  
+  debugLog('Canvas configurado con dimensiones:', {
+    width: canvas.width,
+    height: canvas.height,
+    videoWidth: camera.videoWidth,
+    videoHeight: camera.videoHeight
+  });
+}
+
+// Capturar imagen en alta calidad (4032x3024)
 function captureHighQualityImage(sourceElement) {
   return new Promise((resolve, reject) => {
     try {
@@ -1650,7 +1650,7 @@ function captureHighQualityImage(sourceElement) {
         throw new Error('Canvas no disponible');
       }
       
-      // Verificar disponibilidade do video e dimensões
+      // Verificar disponibilidad del video y dimensiones
       const videoWidth = sourceElement.videoWidth;
       const videoHeight = sourceElement.videoHeight;
       
@@ -1660,11 +1660,11 @@ function captureHighQualityImage(sourceElement) {
       
       console.log(`Capturando imagen del video con dimensiones: ${videoWidth}x${videoHeight}`);
       
-      // Ajustar dimensões do canvas para corresponder ao objetivo
+      // Ajustar dimensiones del canvas para corresponder al objetivo
       canvas.width = TARGET_WIDTH;
       canvas.height = TARGET_HEIGHT;
       
-      // Configurar canvas para máxima qualidade
+      // Configurar canvas para máxima calidad
       const ctx = canvas.getContext('2d', { 
         alpha: false,
         desynchronized: true,
@@ -1675,14 +1675,13 @@ function captureHighQualityImage(sourceElement) {
         throw new Error('No fue posible obtener contexto del canvas');
       }
       
-      // Importantes configurações de qualidade
+      // Importantes configuraciones de calidad
       ctx.imageSmoothingEnabled = false;
       ctx.imageSmoothingQuality = 'high';
       
       // Limpiar canvas antes de dibujar
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Usar o código original para captura, que sabemos que funciona
       // Calcular dimensiones preservando al máximo la resolución
       // Usar el máximo de la resolución disponible del video
       const sourceRatio = videoWidth / videoHeight;
@@ -1709,9 +1708,6 @@ function captureHighQualityImage(sourceElement) {
       sy = Math.floor(sy);
       sw = Math.floor(sw);
       sh = Math.floor(sh);
-      
-      // Mostrar na console para debug
-      console.log(`Capturando área: sx=${sx}, sy=${sy}, sw=${sw}, sh=${sh}`);
       
       // Dibujar en el canvas, preservando la calidad máxima
       ctx.drawImage(
@@ -1743,6 +1739,111 @@ function captureHighQualityImage(sourceElement) {
       reject(err);
     }
   });
+}
+
+// Función principal de captura y upload con retry automatizado
+async function captureAndUpload(codeNumber, photoKey) {
+  // Verificar si está logueado
+  if (!appState.accessToken) {
+    updateCameraStatus('Inicie sesión antes de capturar fotos', 'error');
+    return;
+  }
+  
+  // Verificar si la cámara está disponible
+  if (!appState.mediaStream) {
+    updateCameraStatus('Cámara no disponible', 'error');
+    return;
+  }
+  
+  const maxRetries = 2;
+  let attempt = 0;
+  
+  while (attempt <= maxRetries) {
+    try {
+      // Actualizar status Firebase
+      if (appState.firebaseRefs.status) {
+        appState.firebaseRefs.status.update({
+          photoStatus: 'capturing',
+          captureTime: firebase.database.ServerValue.TIMESTAMP
+        });
+      }
+      
+      // Actualizar status de la foto específica
+      if (appState.firebaseRefs.photos && photoKey) {
+        appState.firebaseRefs.photos.child(photoKey).update({
+          status: 'capturing',
+          captureTime: firebase.database.ServerValue.TIMESTAMP
+        });
+      }
+      
+      // Mostrar mensaje simple
+      updateCameraStatus(`Capturando: ${codeNumber}`);
+      
+      // Definir nombre del archivo con extensión basada en el formato
+      const extension = IMAGE_FORMAT === 'image/png' ? '.png' : '.jpg';
+      const fileName = `${codeNumber}${extension}`;
+      
+      console.log('Capturando imagen con nombre:', fileName);
+      
+      // Capturar imagen en alta calidad
+      const imageBlob = await captureHighQualityImage(domElements.iphone.camera);
+      
+      // Mostrar mensaje de captura
+      updateCameraStatus('Enviando a Drive...');
+      
+      // Actualizar status Firebase
+      if (appState.firebaseRefs.status) {
+        appState.firebaseRefs.status.update({
+          photoStatus: 'uploading',
+          uploadStartTime: firebase.database.ServerValue.TIMESTAMP
+        });
+      }
+      
+      // Actualizar status de la foto específica
+      if (appState.firebaseRefs.photos && photoKey) {
+        appState.firebaseRefs.photos.child(photoKey).update({
+          status: 'uploading',
+          uploadStartTime: firebase.database.ServerValue.TIMESTAMP
+        });
+      }
+      
+      // Enviar a Google Drive
+      await uploadToDrive(imageBlob, fileName, photoKey);
+      
+      // Si llegamos aquí, éxito!
+      break;
+    } catch (err) {
+      attempt++;
+      console.error(`Error en la captura (intento ${attempt}/${maxRetries+1}):`, err);
+      
+      if (attempt <= maxRetries) {
+        // Intentar nuevamente después de una pequeña pausa
+        updateCameraStatus(`Intentando nuevamente (${attempt}/${maxRetries})...`);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      } else {
+        // Desistir después de todos los intentos
+        updateCameraStatus('Error al capturar: ' + (err.message || 'Falla desconocida'), 'error');
+        
+        // Actualizar status Firebase
+        if (appState.firebaseRefs.status) {
+          appState.firebaseRefs.status.update({
+            photoStatus: 'error',
+            errorMessage: err.message,
+            errorTime: firebase.database.ServerValue.TIMESTAMP
+          });
+        }
+        
+        // Actualizar status de la foto específica
+        if (appState.firebaseRefs.photos && photoKey) {
+          appState.firebaseRefs.photos.child(photoKey).update({
+            status: 'error',
+            errorMessage: err.message,
+            errorTime: firebase.database.ServerValue.TIMESTAMP
+          });
+        }
+      }
+    }
+  }
 }
 
 // Upload a Google Drive con backoff exponencial y retries
