@@ -1,5 +1,5 @@
 // === CONFIG Google API ===
-const CLIENT_ID = '209622447692-eev27ais29mr9rn8o1jfjh9tc5budni4.apps.googleusercontent.com';
+const CLIENT_ID = '209622447692-eev27ais29mr9rno1jfjh9tc5budni4.apps.googleusercontent.com';
 const FOLDER_ID = '1PoWXuFHe0-AXKLTbQlWu0NmEG3aC-ZxP';
 const API_KEY = ''; // Agregue su API_KEY si es necesario
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
@@ -183,6 +183,8 @@ window.addEventListener('DOMContentLoaded', () => {
     checkOrientation();
     window.addEventListener('resize', checkOrientation);
     window.addEventListener('orientationchange', checkOrientation);
+    // Adicionar evento para atualizar o viewport da câmera quando a tela mudar de tamanho
+    window.addEventListener('resize', updateCameraViewport);
     
     // Configuración para modo tablet
     setupTabletMode();
@@ -1394,62 +1396,93 @@ function handleAuthClick() {
   }
 }
 
-// Función para obtener las configuraciones ideales de cámara para modo horizontal
-async function getBestCameraSettings() {
-  try {
-    // Verificar dispositivos disponibles
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videoDevices = devices.filter(device => device.kind === 'videoinput');
-    
-    if (videoDevices.length === 0) {
-      throw new Error('Ninguna cámara encontrada');
-    }
-    
-    // Identificar la cámara trasera para mejor calidad
-    const rearCamera = videoDevices.find(device => 
-      device.label.toLowerCase().includes('back') || 
-      device.label.toLowerCase().includes('trasera') ||
-      device.label.toLowerCase().includes('rear')
-    );
-    
-    const deviceId = rearCamera ? rearCamera.deviceId : videoDevices[0].deviceId;
-    
-    // Configuraciones optimizadas para iPhone
-    if (deviceDetection.isIOS) {
-      return {
-        audio: false,
-        video: {
-          deviceId: deviceId ? { exact: deviceId } : undefined,
-          facingMode: rearCamera ? "environment" : "user",
-          width: { ideal: 4032 },
-          height: { ideal: 3024 },
-          zoom: 1.0, 
-          exposureMode: 'continuousAutoExposure',
-          whiteBalanceMode: 'continuousAutoWhiteBalance'
-        }
-      };
-    } else {
-      return {
-        audio: false,
-        video: {
-          deviceId: deviceId ? { exact: deviceId } : undefined,
-          facingMode: rearCamera ? "environment" : "user",
-          width: { ideal: TARGET_WIDTH },
-          height: { ideal: TARGET_HEIGHT },
-          aspectRatio: { ideal: TARGET_RATIO }
-        }
-      };
-    }
-  } catch (err) {
-    console.error('Error al configurar cámara:', err);
-    // Configuración fallback
-    return {
-      audio: false,
-      video: { 
-        facingMode: "environment"
-      }
-    };
+// Actualizar dimensiones del canvas
+function updateCanvasDimensions() {
+  const { camera, canvas } = domElements.iphone;
+  
+  if (!camera || !camera.videoWidth || !camera.videoHeight || !canvas) return;
+  
+  // Asegurar que el canvas tenga las dimensiones objetivo para captura de alta calidad
+  canvas.width = TARGET_WIDTH;
+  canvas.height = TARGET_HEIGHT;
+  
+  // Verificar si las dimensiones del video son menores que el objetivo (posible limitación del dispositivo)
+  if (camera.videoWidth < TARGET_WIDTH || camera.videoHeight < TARGET_HEIGHT) {
+    console.warn(`Alerta: Dimensiones del video (${camera.videoWidth}x${camera.videoHeight}) son menores que el objetivo (${TARGET_WIDTH}x${TARGET_HEIGHT}). La calidad puede estar limitada por el hardware.`);
   }
+  
+  debugLog('Canvas configurado con dimensiones:', {
+    width: canvas.width,
+    height: canvas.height,
+    videoWidth: camera.videoWidth,
+    videoHeight: camera.videoHeight
+  });
+}
+
+// NUEVA FUNCIÓN: Actualizar el visor de la cámara para que coincida con la proporción de captura
+function updateCameraViewport() {
+  const { camera } = domElements.iphone;
+  if (!camera || !appState.mediaStream) return;
+  
+  // Criar ou obter o elemento de guia de visualização
+  let viewportGuide = document.getElementById('viewport-guide');
+  if (!viewportGuide) {
+    viewportGuide = document.createElement('div');
+    viewportGuide.id = 'viewport-guide';
+    camera.parentElement.appendChild(viewportGuide);
+  }
+  
+  // Calcular a proporção da tela e da imagem alvo
+  const screenRatio = window.innerWidth / window.innerHeight;
+  const targetRatio = TARGET_WIDTH / TARGET_HEIGHT; // 4:3
+  
+  // Calcular dimensões da guia para manter a proporção 4:3
+  let guideWidth, guideHeight;
+  if (screenRatio > targetRatio) {
+    // Tela mais larga que a proporção alvo: altura máxima, largura proporcional
+    guideHeight = window.innerHeight;
+    guideWidth = guideHeight * targetRatio;
+  } else {
+    // Tela mais estreita que a proporção alvo: largura máxima, altura proporcional
+    guideWidth = window.innerWidth;
+    guideHeight = guideWidth / targetRatio;
+  }
+  
+  // Posicionar a guia centralizada
+  const leftOffset = (window.innerWidth - guideWidth) / 2;
+  const topOffset = (window.innerHeight - guideHeight) / 2;
+  
+  // Aplicar estilos
+  viewportGuide.style.position = 'absolute';
+  viewportGuide.style.width = `${guideWidth}px`;
+  viewportGuide.style.height = `${guideHeight}px`;
+  viewportGuide.style.left = `${leftOffset}px`;
+  viewportGuide.style.top = `${topOffset}px`;
+  viewportGuide.style.border = '2px solid rgba(255,255,255,0.7)';
+  viewportGuide.style.boxShadow = '0 0 0 2000px rgba(0,0,0,0.3)';
+  viewportGuide.style.borderRadius = '8px';
+  viewportGuide.style.pointerEvents = 'none';
+  viewportGuide.style.zIndex = '15';
+  
+  // Adicionar texto informativo
+  if (!document.getElementById('viewport-guide-text')) {
+    const guideText = document.createElement('div');
+    guideText.id = 'viewport-guide-text';
+    guideText.textContent = "Área de captura";
+    guideText.style.position = 'absolute';
+    guideText.style.bottom = '10px';
+    guideText.style.left = '50%';
+    guideText.style.transform = 'translateX(-50%)';
+    guideText.style.color = 'white';
+    guideText.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    guideText.style.padding = '5px 10px';
+    guideText.style.borderRadius = '12px';
+    guideText.style.fontSize = '12px';
+    viewportGuide.appendChild(guideText);
+  }
+  
+  // Também modificar o object-fit do vídeo para conter em vez de cover
+  camera.style.objectFit = 'contain';
 }
 
 // Inicializar la cámara en modo horizontal con retry y feedback
@@ -1507,8 +1540,11 @@ async function setupCamera() {
       // Intentar aplicar configuraciones avanzadas
       await optimizeCameraSettings(stream);
       
-      // Actualizar dimensiones del canvas
+      // Atualizar dimensiones del canvas
       updateCanvasDimensions();
+      
+      // AQUÍ LA NUEVA LÍNEA: Atualizar el viewport de la cámara
+      updateCameraViewport();
       
       updateCameraStatus('Cámara lista');
       appState.isCameraInitialized = true;
@@ -1605,30 +1641,7 @@ async function optimizeCameraSettings(stream) {
   }
 }
 
-// Actualizar dimensiones del canvas basado en el video actual
-function updateCanvasDimensions() {
-  const { camera, canvas } = domElements.iphone;
-  
-  if (!camera || !camera.videoWidth || !camera.videoHeight || !canvas) return;
-  
-  // Asegurar que el canvas tenga las dimensiones objetivo para captura de alta calidad
-  canvas.width = TARGET_WIDTH;
-  canvas.height = TARGET_HEIGHT;
-  
-  // Verificar si las dimensiones del video son menores que el objetivo (posible limitación del dispositivo)
-  if (camera.videoWidth < TARGET_WIDTH || camera.videoHeight < TARGET_HEIGHT) {
-    console.warn(`Alerta: Dimensiones del video (${camera.videoWidth}x${camera.videoHeight}) son menores que el objetivo (${TARGET_WIDTH}x${TARGET_HEIGHT}). La calidad puede estar limitada por el hardware.`);
-  }
-  
-  debugLog('Canvas configurado con dimensiones:', {
-    width: canvas.width,
-    height: canvas.height,
-    videoWidth: camera.videoWidth,
-    videoHeight: camera.videoHeight
-  });
-}
-
-// Capturar imagen en alta calidad (4032x3024)
+// FUNCIÓN ACTUALIZADA: Capturar imagen en alta calidad (4032x3024)
 function captureHighQualityImage(sourceElement) {
   return new Promise((resolve, reject) => {
     try {
@@ -1637,7 +1650,10 @@ function captureHighQualityImage(sourceElement) {
         throw new Error('Canvas no disponible');
       }
       
-      // Verificar disponibilidad del video y dimensiones
+      // Obter o viewport guide para saber a área visível
+      const viewportGuide = document.getElementById('viewport-guide');
+      
+      // Verificar disponibilidade do video e dimensões
       const videoWidth = sourceElement.videoWidth;
       const videoHeight = sourceElement.videoHeight;
       
@@ -1647,11 +1663,11 @@ function captureHighQualityImage(sourceElement) {
       
       console.log(`Capturando imagen del video con dimensiones: ${videoWidth}x${videoHeight}`);
       
-      // Ajustar dimensiones del canvas para corresponder al objetivo
+      // Ajustar dimensões do canvas para corresponder ao objetivo
       canvas.width = TARGET_WIDTH;
       canvas.height = TARGET_HEIGHT;
       
-      // Configurar canvas para máxima calidad
+      // Configurar canvas para máxima qualidade
       const ctx = canvas.getContext('2d', { 
         alpha: false,
         desynchronized: true,
@@ -1662,39 +1678,50 @@ function captureHighQualityImage(sourceElement) {
         throw new Error('No fue posible obtener contexto del canvas');
       }
       
-      // Importantes configuraciones de calidad
+      // Importantes configurações de qualidade
       ctx.imageSmoothingEnabled = false;
       ctx.imageSmoothingQuality = 'high';
       
       // Limpiar canvas antes de dibujar
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Calcular dimensiones preservando al máximo la resolución
-      // Usar el máximo de la resolución disponible del video
-      const sourceRatio = videoWidth / videoHeight;
-      const targetRatio = TARGET_WIDTH / TARGET_HEIGHT;
+      // Calcular a área visível na tela
+      const videoAspect = videoWidth / videoHeight;
+      const screenAspect = window.innerWidth / window.innerHeight;
       
-      // Variables para el recorte
-      let sx = 0, sy = 0, sw = videoWidth, sh = videoHeight;
-      
-      // Calcular el recorte con mayor precisión
-      if (Math.abs(sourceRatio - targetRatio) > 0.001) {
-        if (sourceRatio > targetRatio) {
-          // Video es más ancho, recortar en los laterales
-          sw = videoHeight * targetRatio;
-          sx = Math.floor((videoWidth - sw) / 2);
-        } else {
-          // Video es más alto, recortar arriba/abajo
-          sh = videoWidth / targetRatio;
-          sy = Math.floor((videoHeight - sh) / 2);
-        }
+      // Calcular dimensões do vídeo visível com objectFit="contain"
+      let visibleWidth, visibleHeight;
+      if (videoAspect > screenAspect) {
+        visibleWidth = window.innerWidth;
+        visibleHeight = window.innerWidth / videoAspect;
+      } else {
+        visibleHeight = window.innerHeight;
+        visibleWidth = window.innerHeight * videoAspect;
       }
       
-      // Usar números enteros para evitar cálculos subpixel
-      sx = Math.floor(sx);
-      sy = Math.floor(sy);
-      sw = Math.floor(sw);
-      sh = Math.floor(sh);
+      // Calcular área que será capturada (mesma área do viewport guide)
+      let captureWidth, captureHeight;
+      const targetRatio = TARGET_WIDTH / TARGET_HEIGHT;
+      
+      if (screenAspect > targetRatio) {
+        captureHeight = window.innerHeight;
+        captureWidth = captureHeight * targetRatio;
+      } else {
+        captureWidth = window.innerWidth;
+        captureHeight = captureWidth / targetRatio;
+      }
+      
+      // Calcular as coordenadas no vídeo original
+      const scaleX = videoWidth / visibleWidth;
+      const scaleY = videoHeight / visibleHeight;
+      
+      const leftOffset = (window.innerWidth - captureWidth) / 2;
+      const topOffset = (window.innerHeight - captureHeight) / 2;
+      
+      const sx = Math.max(0, leftOffset * scaleX);
+      const sy = Math.max(0, topOffset * scaleY);
+      const sw = Math.min(videoWidth, captureWidth * scaleX);
+      const sh = Math.min(videoHeight, captureHeight * scaleY);
       
       // Dibujar en el canvas, preservando la calidad máxima
       ctx.drawImage(
@@ -1726,111 +1753,6 @@ function captureHighQualityImage(sourceElement) {
       reject(err);
     }
   });
-}
-
-// Función principal de captura y upload con retry automatizado
-async function captureAndUpload(codeNumber, photoKey) {
-  // Verificar si está logueado
-  if (!appState.accessToken) {
-    updateCameraStatus('Inicie sesión antes de capturar fotos', 'error');
-    return;
-  }
-  
-  // Verificar si la cámara está disponible
-  if (!appState.mediaStream) {
-    updateCameraStatus('Cámara no disponible', 'error');
-    return;
-  }
-  
-  const maxRetries = 2;
-  let attempt = 0;
-  
-  while (attempt <= maxRetries) {
-    try {
-      // Actualizar status Firebase
-      if (appState.firebaseRefs.status) {
-        appState.firebaseRefs.status.update({
-          photoStatus: 'capturing',
-          captureTime: firebase.database.ServerValue.TIMESTAMP
-        });
-      }
-      
-      // Actualizar status de la foto específica
-      if (appState.firebaseRefs.photos && photoKey) {
-        appState.firebaseRefs.photos.child(photoKey).update({
-          status: 'capturing',
-          captureTime: firebase.database.ServerValue.TIMESTAMP
-        });
-      }
-      
-      // Mostrar mensaje simple
-      updateCameraStatus(`Capturando: ${codeNumber}`);
-      
-      // Definir nombre del archivo con extensión basada en el formato
-      const extension = IMAGE_FORMAT === 'image/png' ? '.png' : '.jpg';
-      const fileName = `${codeNumber}${extension}`;
-      
-      console.log('Capturando imagen con nombre:', fileName);
-      
-      // Capturar imagen en alta calidad
-      const imageBlob = await captureHighQualityImage(domElements.iphone.camera);
-      
-      // Mostrar mensaje de captura
-      updateCameraStatus('Enviando a Drive...');
-      
-      // Actualizar status Firebase
-      if (appState.firebaseRefs.status) {
-        appState.firebaseRefs.status.update({
-          photoStatus: 'uploading',
-          uploadStartTime: firebase.database.ServerValue.TIMESTAMP
-        });
-      }
-      
-      // Actualizar status de la foto específica
-      if (appState.firebaseRefs.photos && photoKey) {
-        appState.firebaseRefs.photos.child(photoKey).update({
-          status: 'uploading',
-          uploadStartTime: firebase.database.ServerValue.TIMESTAMP
-        });
-      }
-      
-      // Enviar a Google Drive
-      await uploadToDrive(imageBlob, fileName, photoKey);
-      
-      // Si llegamos aquí, éxito!
-      break;
-    } catch (err) {
-      attempt++;
-      console.error(`Error en la captura (intento ${attempt}/${maxRetries+1}):`, err);
-      
-      if (attempt <= maxRetries) {
-        // Intentar nuevamente después de una pequeña pausa
-        updateCameraStatus(`Intentando nuevamente (${attempt}/${maxRetries})...`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } else {
-        // Desistir después de todos los intentos
-        updateCameraStatus('Error al capturar: ' + (err.message || 'Falla desconocida'), 'error');
-        
-        // Actualizar status Firebase
-        if (appState.firebaseRefs.status) {
-          appState.firebaseRefs.status.update({
-            photoStatus: 'error',
-            errorMessage: err.message,
-            errorTime: firebase.database.ServerValue.TIMESTAMP
-          });
-        }
-        
-        // Actualizar status de la foto específica
-        if (appState.firebaseRefs.photos && photoKey) {
-          appState.firebaseRefs.photos.child(photoKey).update({
-            status: 'error',
-            errorMessage: err.message,
-            errorTime: firebase.database.ServerValue.TIMESTAMP
-          });
-        }
-      }
-    }
-  }
 }
 
 // Upload a Google Drive con backoff exponencial y retries
