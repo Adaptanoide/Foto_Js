@@ -1,7 +1,7 @@
-// Arquivo: firebase-config.js
-// Contém a configuração do Firebase para a aplicação
+// Archivo: firebase-config.js
+// Contiene la configuración de Firebase para la aplicación
 
-// IMPORTANTE: Substitua estas informações com as do seu projeto Firebase
+// IMPORTANTE: Reemplace esta información con la de su proyecto Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyDK9DocAsrYMVZTTZdGqNBMja89Bdt877g",
   authDomain: "qr-photo-automation.firebaseapp.com",
@@ -12,33 +12,33 @@ const firebaseConfig = {
   appId: "1:1054121533295:web:944852c141b1d1d41a129a"
 };
 
-// Inicialização do Firebase - com melhor tratamento de erro
+// Inicialización de Firebase - con mejor manejo de error
 function initFirebase() {
-// Verificar se o Firebase está disponível
+// Verificar si Firebase está disponible
 if (typeof firebase === 'undefined') {
-  throw new Error('Firebase SDK não está carregado. Verifique a conexão de rede.');
+  throw new Error('Firebase SDK no está cargado. Verifique la conexión de red.');
 }
 
-// Inicializar Firebase apenas uma vez
+// Inicializar Firebase solo una vez
 if (!firebase.apps.length) {
   try {
     firebase.initializeApp(firebaseConfig);
   } catch (error) {
-    console.error('Erro ao inicializar Firebase:', error);
+    console.error('Error al inicializar Firebase:', error);
     throw error;
   }
 }
 
-// Referência ao Realtime Database
+// Referencia al Realtime Database
 const database = firebase.database();
 
-// Verificar conexão com o banco
+// Verificar conexión con la base de datos
 const connectedRef = database.ref('.info/connected');
 connectedRef.on('value', (snap) => {
   if (snap.val() === true) {
-    console.log('Conectado ao Firebase Realtime Database');
+    console.log('Conectado a Firebase Realtime Database');
   } else {
-    console.warn('Desconectado do Firebase Realtime Database');
+    console.warn('Desconectado de Firebase Realtime Database');
   }
 });
 

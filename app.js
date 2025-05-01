@@ -1,23 +1,23 @@
 // === CONFIG Google API ===
 const CLIENT_ID = '209622447692-eev27ais29mr9rn8o1jfjh9tc5budni4.apps.googleusercontent.com';
 const FOLDER_ID = '1PoWXuFHe0-AXKLTbQlWu0NmEG3aC-ZxP';
-const API_KEY = ''; // Adicione sua API_KEY se necessário
+const API_KEY = ''; // Agregue su API_KEY si es necesario
 const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
-// Configurações otimizadas para iPhone 11 na horizontal
+// Configuraciones optimizadas para iPhone 11 en horizontal
 const IMAGE_FORMAT = 'image/jpeg'; 
 const IMAGE_QUALITY = 1.0; 
 const TARGET_WIDTH = 4032;  
 const TARGET_HEIGHT = 3024;
 const TARGET_RATIO = TARGET_WIDTH / TARGET_HEIGHT;
 
-// Configurações da captura e QR
+// Configuraciones de captura y QR
 const QR_SCAN_INTERVAL = 200;
 const QR_CONFIRMATION_DELAY = 2000;
 const PROCESSING_SIZE = 800;
-const AUTO_CAPTURE_DELAY = 2000;
+const AUTO_CAPTURE_DELAY = 4000;
 
-// Estado da aplicação - centralizado para maior controle
+// Estado de la aplicación - centralizado para mayor control
 const appState = {
   currentMode: null,
   sessionId: null,
@@ -45,7 +45,7 @@ const appState = {
   isConnectedToFirebase: false,
   lastProcessedCode: null,
   
-  // Autenticação
+  // Autenticación
   tokenClient: null,
   accessToken: null,
   gapiInited: false,
@@ -53,22 +53,22 @@ const appState = {
   authStorageKey: 'qrScanAuthToken'
 };
 
-// Detectar dispositivo - com detecção mais confiável
+// Detectar dispositivo - con detección más confiable
 const deviceDetection = {
   isIOS: /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream,
-  isSafari: false, // Será definido abaixo
+  isSafari: false, // Se definirá abajo
   isTablet: /iPad/.test(navigator.userAgent) || (navigator.maxTouchPoints > 0 && window.innerWidth > 768)
 };
 deviceDetection.isSafari = deviceDetection.isIOS && 
   /AppleWebKit/.test(navigator.userAgent) && 
   !/Chrome/.test(navigator.userAgent);
 
-// Modo debug (desativado para produção)
+// Modo debug (desactivado para producción)
 const DEBUG_MODE = false;
 
-// Agrupando todos os elementos DOM por contexto
+// Agrupando todos los elementos DOM por contexto
 const domElements = {
-  // Telas
+  // Pantallas
   screens: {
     deviceSelection: document.getElementById('device-selection-screen'),
     tabletCode: document.getElementById('tablet-code-screen'),
@@ -78,13 +78,13 @@ const domElements = {
     camera: document.getElementById('camera-screen')
   },
   
-  // Seleção de dispositivo
+  // Selección de dispositivo
   deviceSelection: {
     tabletButton: document.getElementById('tablet-select-btn'),
     iphoneButton: document.getElementById('iphone-select-btn')
   },
   
-  // Tela de código Tablet
+  // Pantalla de código Tablet
   tabletCode: {
     codeDisplay: document.getElementById('connection-code'),
     connectionStatus: document.getElementById('tablet-connection-status'),
@@ -92,7 +92,7 @@ const domElements = {
     backBtn: document.getElementById('tablet-code-back-btn')
   },
   
-  // Tela de código iPhone
+  // Pantalla de código iPhone
   iphoneCode: {
     codeInput: document.getElementById('connection-code-input'),
     connectBtn: document.getElementById('connect-btn'),
@@ -140,7 +140,7 @@ const domElements = {
   }
 };
 
-// Logs de debug - Melhorado para suportar diferentes níveis
+// Logs de debug - Mejorado para soportar diferentes niveles
 function debugLog(message, data, level = 'info') {
   if (!DEBUG_MODE) return;
   
@@ -159,131 +159,131 @@ function debugLog(message, data, level = 'info') {
   }
 }
 
-// Inicialização - Com tratamento de erros aprimorado
+// Inicialización - Con manejo de errores mejorado
 window.addEventListener('DOMContentLoaded', () => {
   try {
-    // Setup dos listeners para botões
+    // Configuración de los listeners para botones
     setupDeviceSelectionButtons();
     
-    // Setup Firebase
+    // Configuración Firebase
     try {
       const { database, sessionsRef } = initFirebase();
       appState.firebaseRefs.sessions = sessionsRef;
-      debugLog('Firebase inicializado com sucesso');
+      debugLog('Firebase inicializado con éxito');
     } catch (err) {
-      console.error('Erro ao inicializar Firebase:', err);
+      console.error('Error al inicializar Firebase:', err);
       updateDriveStatus('error');
-      // Continuar mesmo com erro no Firebase, apenas com funcionalidade limitada
+      // Continuar incluso con error en Firebase, solo con funcionalidad limitada
     }
     
-    // Carregar bibliotecas Google
+    // Cargar bibliotecas Google
     loadGoogleLibraries();
     
-    // Verificar e configurar orientação
+    // Verificar y configurar orientación
     checkOrientation();
     window.addEventListener('resize', checkOrientation);
     window.addEventListener('orientationchange', checkOrientation);
     
-    // Setup para modo tablet
+    // Configuración para modo tablet
     setupTabletMode();
     
-    // Tentar restaurar sessão anterior
+    // Intentar restaurar sesión anterior
     tryRestoreAuthSession();
     
-    debugLog('Aplicação inicializada com sucesso');
+    debugLog('Aplicación inicializada con éxito');
   } catch (err) {
-    console.error('Erro fatal na inicialização:', err);
-    // Exibir mensagem amigável para o usuário em vez de falhar silenciosamente
-    alert('Ocorreu um erro ao inicializar o aplicativo. Por favor, recarregue a página.');
+    console.error('Error fatal en la inicialización:', err);
+    // Mostrar mensaje amigable para el usuario en lugar de fallar silenciosamente
+    alert('Ocurrió un error al inicializar la aplicación. Por favor, recargue la página.');
   }
 });
 
-// Tentar restaurar sessão de autenticação anterior - com catch aprimorado
+// Intentar restaurar sesión de autenticación anterior - con catch mejorado
 function tryRestoreAuthSession() {
   try {
     const savedToken = localStorage.getItem(appState.authStorageKey);
     if (savedToken) {
       appState.accessToken = savedToken;
-      debugLog('Token de autenticação restaurado do armazenamento local');
+      debugLog('Token de autenticación restaurado del almacenamiento local');
     }
   } catch (err) {
-    debugLog('Erro ao restaurar sessão:', err, 'warn');
-    // Limpar qualquer token possivelmente corrompido
+    debugLog('Error al restaurar sesión:', err, 'warn');
+    // Limpiar cualquier token posiblemente corrupto
     try {
       localStorage.removeItem(appState.authStorageKey);
     } catch (e) {
-      // Falha silenciosa apenas para limpeza de token
+      // Falla silenciosa solo para limpieza de token
     }
   }
 }
 
-// Gerar código de conexão aleatório - com tamanho padrão de 3 dígitos
+// Generar código de conexión aleatorio - con tamaño predeterminado de 3 dígitos
 function generateConnectionCode() {
   return Math.floor(Math.random() * 900 + 100).toString();
 }
 
-// Configurar botões da tela de seleção de dispositivo
+// Configurar botones de la pantalla de selección de dispositivo
 function setupDeviceSelectionButtons() {
   const { tabletButton, iphoneButton } = domElements.deviceSelection;
   
-  // Botão "Tablet"
+  // Botón "Tablet"
   if (tabletButton) {
     tabletButton.addEventListener('click', () => {
       appState.currentMode = 'tablet';
       
-      // Gerar um novo código de conexão
+      // Generar un nuevo código de conexión
       appState.connectionCode = generateConnectionCode();
       
-      // Exibir o código
+      // Mostrar el código
       if (domElements.tabletCode.codeDisplay) {
         domElements.tabletCode.codeDisplay.textContent = appState.connectionCode;
       }
       
-      // Registrar no Firebase como um host
+      // Registrar en Firebase como un host
       setupFirebaseForTabletHost(appState.connectionCode);
       
-      // Mostrar a tela de código do tablet
+      // Mostrar la pantalla de código del tablet
       showScreen(domElements.screens.tabletCode);
     });
   }
 
-  // Botão "iPhone"
+  // Botón "iPhone"
   if (iphoneButton) {
     iphoneButton.addEventListener('click', () => {
       appState.currentMode = 'iphone';
       showScreen(domElements.screens.iphoneCode);
       
-      // Focar no campo de entrada
+      // Enfocar en el campo de entrada
       if (domElements.iphoneCode.codeInput) {
         domElements.iphoneCode.codeInput.focus();
       }
     });
   }
   
-  // Botão "Gerar Novo Código" na tela do tablet
+  // Botón "Generar Nuevo Código" en la pantalla del tablet
   if (domElements.tabletCode.generateNewCodeBtn) {
     domElements.tabletCode.generateNewCodeBtn.addEventListener('click', () => {
-      // Desconectar da sessão anterior
+      // Desconectar de la sesión anterior
       if (appState.isConnectedToFirebase) {
         disconnectFromFirebase();
       }
       
-      // Gerar novo código
+      // Generar nuevo código
       appState.connectionCode = generateConnectionCode();
       
-      // Exibir o novo código
+      // Mostrar el nuevo código
       if (domElements.tabletCode.codeDisplay) {
         domElements.tabletCode.codeDisplay.textContent = appState.connectionCode;
       }
       
-      // Registrar novo código no Firebase
+      // Registrar nuevo código en Firebase
       setupFirebaseForTabletHost(appState.connectionCode);
       
       updateDriveStatus('ready');
     });
   }
   
-  // Botão "Voltar" na tela de código do tablet
+  // Botón "Volver" en la pantalla de código del tablet
   if (domElements.tabletCode.backBtn) {
     domElements.tabletCode.backBtn.addEventListener('click', () => {
       disconnectFromFirebase();
@@ -292,7 +292,7 @@ function setupDeviceSelectionButtons() {
     });
   }
   
-  // Botão "Desconectar" na tela principal do tablet
+  // Botón "Desconectar" en la pantalla principal del tablet
   if (domElements.tablet.disconnectBtn) {
     domElements.tablet.disconnectBtn.addEventListener('click', () => {
       disconnectFromFirebase();
@@ -301,12 +301,12 @@ function setupDeviceSelectionButtons() {
     });
   }
 
-  // Botão "Conectar" na tela de código do iPhone
+  // Botón "Conectar" en la pantalla de código del iPhone
   if (domElements.iphoneCode.connectBtn) {
     domElements.iphoneCode.connectBtn.addEventListener('click', handleConnectButtonClick);
   }
   
-  // Campo de entrada de código no iPhone - permitir Enter
+  // Campo de entrada de código en iPhone - permitir Enter
   if (domElements.iphoneCode.codeInput) {
     domElements.iphoneCode.codeInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -315,7 +315,7 @@ function setupDeviceSelectionButtons() {
     });
   }
   
-  // Botão "Voltar" na tela de código do iPhone
+  // Botón "Volver" en la pantalla de código del iPhone
   if (domElements.iphoneCode.backBtn) {
     domElements.iphoneCode.backBtn.addEventListener('click', () => {
       appState.currentMode = null;
@@ -323,7 +323,7 @@ function setupDeviceSelectionButtons() {
     });
   }
   
-  // Botão "Desconectar" na tela de login do iPhone
+  // Botón "Desconectar" en la pantalla de login del iPhone
   if (domElements.iphone.disconnectBtn) {
     domElements.iphone.disconnectBtn.addEventListener('click', () => {
       disconnectFromFirebase();
@@ -332,7 +332,7 @@ function setupDeviceSelectionButtons() {
     });
   }
   
-  // Botões de ação no modo tablet
+  // Botones de acción en modo tablet
   if (domElements.tablet.clearBtn) {
     domElements.tablet.clearBtn.addEventListener('click', () => {
       resetTabletDisplay();
@@ -344,44 +344,44 @@ function setupDeviceSelectionButtons() {
   }
 }
 
-// Função para validar e conectar (extraída para melhorar legibilidade)
+// Función para validar y conectar (extraída para mejorar legibilidad)
 function handleConnectButtonClick() {
   const enteredCode = domElements.iphoneCode.codeInput.value.trim();
   
   if (enteredCode.length !== 3) {
-    showCodeError('Por favor, digite o código de 3 dígitos');
+    showCodeError('Por favor, ingrese el código de 3 dígitos');
     return;
   }
   
   if (!/^\d{3}$/.test(enteredCode)) {
-    showCodeError('O código deve conter apenas 3 dígitos numéricos');
+    showCodeError('El código debe contener solo 3 dígitos numéricos');
     return;
   }
   
-  // Verificar se o código existe no Firebase
+  // Verificar si el código existe en Firebase
   connectToTablet(enteredCode);
 }
 
-// Atualizar status do indicador de Drive - Simplificado
+// Actualizar estado del indicador de Drive - Simplificado
 function updateDriveStatus(state, message) {
   const { container, icon, text } = domElements.driveStatus;
   if (!container || !icon) return;
   
-  // Remover todas as classes de estado
+  // Eliminar todas las clases de estado
   icon.classList.remove('waiting', 'uploading', 'success', 'error');
   
-  // Atualizar classe baseada no estado
+  // Actualizar clase basada en el estado
   if (state) {
     icon.classList.add(state);
   }
   
-  // Remover completamente o texto (sempre)
+  // Eliminar completamente el texto (siempre)
   if (text) text.textContent = '';
   
-  // Mostrar o status em destaque
+  // Mostrar el estado destacado
   container.classList.add('active');
   
-  // Reduzir a opacidade após alguns segundos se for sucesso
+  // Reducir la opacidad después de algunos segundos si es éxito
   if (state === 'success') {
     setTimeout(() => {
       container.classList.remove('active');
@@ -389,7 +389,7 @@ function updateDriveStatus(state, message) {
   }
 }
 
-// Mostrar erro na tela de entrada de código
+// Mostrar error en la pantalla de entrada de código
 function showCodeError(message) {
   const { errorMessage, codeInput } = domElements.iphoneCode;
   
@@ -397,7 +397,7 @@ function showCodeError(message) {
     errorMessage.textContent = message;
     errorMessage.style.display = 'block';
     
-    // Agitar o campo de entrada
+    // Agitar el campo de entrada
     if (codeInput) {
       codeInput.classList.add('shake');
       setTimeout(() => {
@@ -407,7 +407,7 @@ function showCodeError(message) {
   }
 }
 
-// Esconder erro na tela de entrada de código
+// Ocultar error en la pantalla de entrada de código
 function hideCodeError() {
   const { errorMessage } = domElements.iphoneCode;
   
@@ -416,61 +416,61 @@ function hideCodeError() {
   }
 }
 
-// Exibir uma determinada tela e ocultar as demais
+// Mostrar una determinada pantalla y ocultar las demás
 function showScreen(screenElement) {
-  // Obter todas as telas do objeto domElements.screens
+  // Obtener todas las pantallas del objeto domElements.screens
   const screens = Object.values(domElements.screens);
   
-  // Ocultar todas as telas
+  // Ocultar todas las pantallas
   screens.forEach(screen => {
     if (screen) screen.style.display = 'none';
   });
   
-  // Exibir a tela solicitada
+  // Mostrar la pantalla solicitada
   if (screenElement) {
     screenElement.style.display = 'flex';
     
-    // Focar no input do tablet automaticamente
+    // Enfocar en el input del tablet automáticamente
     if (screenElement === domElements.screens.tablet && domElements.tablet.qrInput) {
       setTimeout(() => domElements.tablet.qrInput.focus(), 300);
     }
   }
 }
 
-// Verificar e ajustar orientação do dispositivo
+// Verificar y ajustar orientación del dispositivo
 function checkOrientation() {
   if (window.matchMedia("(orientation: portrait)").matches && appState.currentMode === 'iphone') {
-    // Estamos em portrait - solicitar ao usuário rotacionar para landscape
+    // Estamos en portrait - solicitar al usuario rotar a landscape
     document.body.classList.add('portrait-warning');
-    debugLog('Dispositivo em modo retrato - solicitando rotação');
+    debugLog('Dispositivo en modo retrato - solicitando rotación');
   } else {
-    // Estamos em landscape ou em modo tablet
+    // Estamos en landscape o en modo tablet
     document.body.classList.remove('portrait-warning');
   }
 }
 
-// Configurar Firebase para modo tablet (host) - com melhor tratamento de erros
+// Configurar Firebase para modo tablet (host) - con mejor manejo de errores
 function setupFirebaseForTabletHost(code) {
   if (!firebase || !appState.firebaseRefs.sessions) {
     updateDriveStatus('error');
-    debugLog('Firebase não inicializado', null, 'error');
+    debugLog('Firebase no inicializado', null, 'error');
     return;
   }
   
   try {
-    // Desconectar de qualquer sessão anterior
+    // Desconectar de cualquier sesión anterior
     if (appState.isConnectedToFirebase) {
       disconnectFromFirebase();
     }
     
-    // Configurar referências Firebase para o código de conexão
+    // Configurar referencias Firebase para el código de conexión
     const sessionRef = appState.firebaseRefs.sessions.child(code);
     appState.firebaseRefs.currentSession = sessionRef;
     appState.firebaseRefs.photos = sessionRef.child('photos');
     appState.firebaseRefs.status = sessionRef.child('status');
     appState.firebaseRefs.devices = sessionRef.child('devices');
     
-    // Inicializar os dados da sessão com timestamp do servidor
+    // Inicializar los datos de la sesión con timestamp del servidor
     sessionRef.update({
       created: firebase.database.ServerValue.TIMESTAMP,
       lastActivity: firebase.database.ServerValue.TIMESTAMP,
@@ -485,31 +485,31 @@ function setupFirebaseForTabletHost(code) {
       userAgent: navigator.userAgent
     });
     
-    // Configurar desconexão
+    // Configurar desconexión
     tabletRef.onDisconnect().update({
       connected: false,
       lastSeen: firebase.database.ServerValue.TIMESTAMP
     });
     
-    // Escutar status do iPhone
+    // Escuchar status del iPhone
     setupIPhoneStatusListener();
     
-    // Escutar status das fotos
+    // Escuchar status de las fotos
     setupPhotoStatusListener();
     
-    // Configurar input para leitura do scanner físico
+    // Configurar input para lectura del scanner físico
     setupTabletQRInputListener();
     
     appState.isConnectedToFirebase = true;
-    debugLog('Firebase configurado para host tablet com código:', code);
+    debugLog('Firebase configurado para host tablet con código:', code);
   } catch (err) {
-    debugLog('Erro ao configurar host tablet no Firebase:', err, 'error');
+    debugLog('Error al configurar host tablet en Firebase:', err, 'error');
     updateDriveStatus('error');
-    alert('Erro ao conectar ao serviço. Por favor, tente novamente.');
+    alert('Error al conectar al servicio. Por favor, intente nuevamente.');
   }
 }
 
-// Escutar status do iPhone - Extraído para melhorar legibilidade
+// Escuchar status del iPhone - Extraído para mejorar legibilidad
 function setupIPhoneStatusListener() {
   const iphoneRef = appState.firebaseRefs.devices.child('iphone');
   iphoneRef.on('value', (snapshot) => {
@@ -527,7 +527,7 @@ function setupIPhoneStatusListener() {
 function handleIPhoneConnected() {
   appState.isConnected = true;
   
-  // Atualizar status de conexão
+  // Actualizar status de conexión
   if (domElements.tabletCode.connectionStatus) {
     domElements.tabletCode.connectionStatus.innerHTML = `
       <div class="status-indicator connected"></div>
@@ -539,19 +539,19 @@ function handleIPhoneConnected() {
     domElements.tablet.iphoneStatus.textContent = 'iPhone conectado';
     domElements.tablet.iphoneStatus.classList.add('connected');
     
-    // Modificar a cor da bolinha
+    // Modificar el color del círculo
     const statusDot = document.querySelector('.connection-status-badge .status-dot');
     if (statusDot) {
       statusDot.classList.add('connected');
     }
   }
   
-  // Em 2 segundos, se ainda estiver na tela de código, ir para a tela principal
+  // En 2 segundos, si aún estamos en la pantalla de código, ir a la pantalla principal
   setTimeout(() => {
     if (appState.isConnected && domElements.screens.tabletCode.style.display !== 'none') {
       showScreen(domElements.screens.tablet);
       
-      // Exibir o código de conexão na tela principal também
+      // Mostrar el código de conexión en la pantalla principal también
       if (domElements.tablet.sessionDisplay) {
         domElements.tablet.sessionDisplay.textContent = appState.connectionCode;
       }
@@ -568,7 +568,7 @@ function handleIPhoneDisconnected() {
   if (domElements.tabletCode.connectionStatus) {
     domElements.tabletCode.connectionStatus.innerHTML = `
       <div class="status-indicator waiting"></div>
-      <span>Aguardando conexão do iPhone...</span>
+      <span>Esperando conexión del iPhone...</span>
     `;
   }
   
@@ -576,7 +576,7 @@ function handleIPhoneDisconnected() {
     domElements.tablet.iphoneStatus.textContent = 'iPhone desconectado';
     domElements.tablet.iphoneStatus.classList.remove('connected');
     
-    // Revertendo a cor da bolinha
+    // Revertiendo el color del círculo
     const statusDot = document.querySelector('.connection-status-badge .status-dot');
     if (statusDot) {
       statusDot.classList.remove('connected');
@@ -586,7 +586,7 @@ function handleIPhoneDisconnected() {
   updateDriveStatus('error');
 }
 
-// Escutar status das fotos - Extraído para melhorar legibilidade
+// Escuchar status de las fotos - Extraído para mejorar legibilidad
 function setupPhotoStatusListener() {
   appState.firebaseRefs.status.on('value', (snapshot) => {
     const status = snapshot.val();
@@ -597,7 +597,8 @@ function setupPhotoStatusListener() {
   });
 }
 
-// Handler para mudança no status da foto
+// Handler para cambio en el status de la foto
+// MODIFICADO: Limpieza inmediata después de completar la foto
 function handlePhotoStatusChange(photoStatus) {
   switch(photoStatus) {
     case 'capturing':
@@ -615,14 +616,12 @@ function handlePhotoStatusChange(photoStatus) {
         domElements.tablet.photoCount.textContent = appState.photoCount;
       }
       
-      // Resetar após alguns segundos
-      setTimeout(() => {
-        resetTabletDisplay();
-        if (domElements.tablet.qrInput) {
-          domElements.tablet.qrInput.value = '';
-          domElements.tablet.qrInput.focus();
-        }
-      }, 3000);
+      // Resetear inmediatamente sin timeout
+      resetTabletDisplay();
+      if (domElements.tablet.qrInput) {
+        domElements.tablet.qrInput.value = '';
+        domElements.tablet.qrInput.focus();
+      }
       break;
     case 'error':
       updateDriveStatus('error');
@@ -630,14 +629,14 @@ function handlePhotoStatusChange(photoStatus) {
   }
 }
 
-// Configurar listener para o input de QR no tablet
+// Configurar listener para el input de QR en tablet
 function setupTabletQRInputListener() {
   const { qrInput } = domElements.tablet;
   
   if (qrInput) {
     qrInput.addEventListener('input', handleTabletQrInput);
     qrInput.addEventListener('keydown', (e) => {
-      // Capturar Enter do scanner
+      // Capturar Enter del scanner
       if (e.key === 'Enter') {
         const qrText = qrInput.value.trim();
         if (qrText.length > 0) {
@@ -648,15 +647,15 @@ function setupTabletQRInputListener() {
   }
 }
 
-// Tentar conectar ao tablet com o código informado
+// Intentar conectar al tablet con el código informado
 function connectToTablet(code) {
   if (!firebase || !appState.firebaseRefs.sessions) {
-    updateCameraStatus('Erro ao conectar com o serviço de sincronização', 'error');
+    updateCameraStatus('Error al conectar con el servicio de sincronización', 'error');
     return;
   }
   
   try {
-    // Verificar se o código existe
+    // Verificar si el código existe
     const sessionRef = appState.firebaseRefs.sessions.child(code);
     
     sessionRef.once('value')
@@ -664,14 +663,14 @@ function connectToTablet(code) {
         const sessionData = snapshot.val();
         
         if (!sessionData) {
-          showCodeError('Código inválido ou expirado');
+          showCodeError('Código inválido o expirado');
           return;
         }
         
-        // Código existe, armazenar e conectar
+        // Código existe, almacenar y conectar
         appState.connectionCode = code;
         
-        // Configurar referências Firebase
+        // Configurar referencias Firebase
         appState.firebaseRefs.currentSession = sessionRef;
         appState.firebaseRefs.photos = sessionRef.child('photos');
         appState.firebaseRefs.status = sessionRef.child('status');
@@ -685,7 +684,7 @@ function connectToTablet(code) {
           userAgent: navigator.userAgent
         });
         
-        // Configurar desconexão
+        // Configurar desconexión
         iphoneRef.onDisconnect().update({
           connected: false,
           lastSeen: firebase.database.ServerValue.TIMESTAMP
@@ -693,59 +692,59 @@ function connectToTablet(code) {
         
         appState.isConnectedToFirebase = true;
         
-        // Esconder erro se houver
+        // Ocultar error si existe
         hideCodeError();
         
-        // Atualizar timestamp de última atividade
+        // Actualizar timestamp de última actividad
         sessionRef.update({
           lastActivity: firebase.database.ServerValue.TIMESTAMP
         });
         
-        // Ir para a tela de login
+        // Ir a la pantalla de login
         showScreen(domElements.screens.login);
         
-        // Exibir o código na tela de login
+        // Mostrar el código en la pantalla de login
         if (domElements.iphone.loginSessionDisplay) {
           domElements.iphone.loginSessionDisplay.textContent = appState.connectionCode;
         }
         
-        // Configurar autenticação Google
+        // Configurar autenticación Google
         setupGoogleAuth();
         setupLoginButton();
         updateAuthUIState(appState.accessToken ? true : false);
         
-        debugLog('Conectado ao tablet com código:', appState.connectionCode);
+        debugLog('Conectado al tablet con código:', appState.connectionCode);
       })
       .catch((error) => {
-        console.error('Erro ao verificar código:', error);
-        showCodeError('Erro ao verificar código, tente novamente');
+        console.error('Error al verificar código:', error);
+        showCodeError('Error al verificar código, intente nuevamente');
       });
   } catch (error) {
-    console.error('Erro fatal ao conectar:', error);
-    showCodeError('Erro de conexão. Por favor, tente novamente.');
+    console.error('Error fatal al conectar:', error);
+    showCodeError('Error de conexión. Por favor, intente nuevamente.');
   }
 }
 
-// Processar código QR lido no tablet - Simplificado e mais robusto
+// Procesar código QR leído en tablet - Simplificado y más robusto
 function processTabletQrCode(qrText) {
   if (!qrText || appState.isProcessingQR) return;
   
   appState.isProcessingQR = true;
-  debugLog('Processando QR code no tablet:', qrText);
+  debugLog('Procesando QR code en tablet:', qrText);
   
   try {
-    // Extrair número completo e os últimos 5 dígitos  
+    // Extraer número completo y los últimos 5 dígitos  
     const { fullNumber, lastFiveDigits } = extractQRCodeData(qrText);
     
     if (fullNumber && lastFiveDigits) {
-      // Exibir os números
+      // Mostrar los números
       displayQrResult(lastFiveDigits, fullNumber);
       appState.lastProcessedCode = lastFiveDigits;
       updateLastPhotoDisplay(lastFiveDigits);
       
-      // Verificar conexão e notificar iPhone
+      // Verificar conexión y notificar iPhone
       if (appState.isConnected) {
-        // Dividir o QR em partes para manter a compatibilidade com o código anterior
+        // Dividir el QR en partes para mantener la compatibilidad con el código anterior
         const parts = qrText.split(';');
         notifyIphoneToCapture(lastFiveDigits, parts.join(' | '));
       } else {
@@ -753,14 +752,14 @@ function processTabletQrCode(qrText) {
         appState.isProcessingQR = false;
       }
     } else {
-      throw new Error("Não foi possível extrair os dados necessários do QR code");
+      throw new Error("No se pudo extraer los datos necesarios del código QR");
     }
   } catch (error) {
-    console.error("Erro na extração do código:", error);
+    console.error("Error en la extracción del código:", error);
     updateDriveStatus('error');
     appState.isProcessingQR = false;
     
-    // Limpar e focar novamente no input
+    // Limpiar y enfocar nuevamente en el input
     if (domElements.tablet.qrInput) {
       domElements.tablet.qrInput.value = '';
       domElements.tablet.qrInput.focus();
@@ -768,65 +767,65 @@ function processTabletQrCode(qrText) {
   }
 }
 
-// Função de extração de dados do QR code - separada para melhorar legibilidade e manutenção
+// Función de extracción de datos del QR code - separada para mejorar legibilidad y mantenimiento
 function extractQRCodeData(qrText) {
-  // Verificar se temos um QR válido com formato esperado
+  // Verificar si tenemos un QR válido con formato esperado
   if (!qrText || !qrText.includes(';')) {
-    throw new Error("QR Code inválido ou no formato incorreto");
+    throw new Error("Código QR inválido o en formato incorrecto");
   }
   
-  // Dividir o QR em partes
+  // Dividir el QR en partes
   const parts = qrText.split(';').map(part => part.trim());
   
-  // Verificar se temos pelo menos 4 partes
+  // Verificar si tenemos al menos 4 partes
   if (parts.length < 4) {
-    throw new Error("QR Code não possui o formato esperado");
+    throw new Error("El código QR no tiene el formato esperado");
   }
   
-  // Extrair o campo na posição 4 (índice 3)
+  // Extraer el campo en la posición 4 (índice 3)
   let fullNumber = parts[3];
   
-  // Verificar se o campo é undefined ou null
+  // Verificar si el campo es undefined o null
   if (fullNumber === undefined || fullNumber === null) {
-    // Tentar uma abordagem alternativa
+    // Intentar un enfoque alternativo
     const matches = qrText.match(/;([^;]+);/g);
     if (matches && matches.length >= 2) {
       fullNumber = matches[1].replace(/;/g, '').trim();
     } else {
-      throw new Error("Não foi possível extrair o campo necessário");
+      throw new Error("No se pudo extraer el campo necesario");
     }
   }
   
-  // Verificar se o número existe
+  // Verificar si el número existe
   if (!fullNumber) {
-    throw new Error("Campo extraído está vazio");
+    throw new Error("Campo extraído está vacío");
   }
   
-  // Garantir que estamos trabalhando com string e remover espaços
+  // Garantizar que estamos trabajando con string y eliminar espacios
   fullNumber = String(fullNumber).trim();
   
-  // Verificar se o número tem pelo menos 5 dígitos
+  // Verificar si el número tiene al menos 5 dígitos
   if (fullNumber.length < 5) {
-    throw new Error("Número extraído é muito curto");
+    throw new Error("El número extraído es muy corto");
   }
   
-  // Extrair os últimos 5 dígitos
+  // Extraer los últimos 5 dígitos
   const lastFiveDigits = fullNumber.slice(-5);
   
-  // Verificar se temos 5 dígitos numéricos
+  // Verificar si tenemos 5 dígitos numéricos
   if (!/^\d{5}$/.test(lastFiveDigits)) {
-    // Tentar limpar caracteres não numéricos
+    // Intentar limpiar caracteres no numéricos
     const cleanedDigits = lastFiveDigits.replace(/\D/g, '');
     if (cleanedDigits.length === 5) {
       return { fullNumber, lastFiveDigits: cleanedDigits };
     }
-    throw new Error("Os 5 últimos caracteres não são todos dígitos");
+    throw new Error("Los 5 últimos caracteres no son todos dígitos");
   }
   
   return { fullNumber, lastFiveDigits };
 }
 
-// Exibir resultado do QR no tablet
+// Mostrar resultado del QR en tablet
 function displayQrResult(mainNumber, fullNumber) {
   const { qrMainNumber, qrSecondaryInfo } = domElements.tablet;
   
@@ -837,15 +836,15 @@ function displayQrResult(mainNumber, fullNumber) {
   if (qrSecondaryInfo) {
     qrSecondaryInfo.textContent = fullNumber;
     
-    // Remover qualquer classe de estado anterior
+    // Eliminar cualquier clase de estado anterior
     qrSecondaryInfo.classList.remove('waiting');
   }
   
-  // Atualizar status de forma mais discreta
+  // Actualizar status de forma más discreta
   updateDriveStatus('waiting');
 }
 
-// Notificar iPhone para capturar foto - Com timeout e retry
+// Notificar iPhone para capturar foto - Con timeout y retry
 function notifyIphoneToCapture(codeNumber, additionalInfo) {
   if (!appState.isConnectedToFirebase || !appState.firebaseRefs.photos) {
     updateDriveStatus('error');
@@ -853,17 +852,17 @@ function notifyIphoneToCapture(codeNumber, additionalInfo) {
     return;
   }
   
-  // Verifica novamente se o iPhone está conectado
+  // Verifica nuevamente si el iPhone está conectado
   if (!appState.isConnected) {
     updateDriveStatus('error');
     appState.isProcessingQR = false;
     return;
   }
   
-  // Criar um novo nó para a foto
+  // Crear un nuevo nodo para la foto
   const newPhotoRef = appState.firebaseRefs.photos.push();
   
-  // Dados para a foto
+  // Datos para la foto
   const photoData = {
     code: codeNumber,
     additionalInfo: additionalInfo || '',
@@ -871,17 +870,17 @@ function notifyIphoneToCapture(codeNumber, additionalInfo) {
     status: 'requested'
   };
   
-  // Salvar os dados com timeout e retry
+  // Guardar los datos con timeout y retry
   const maxRetries = 3;
   let currentRetry = 0;
   
   function attemptSave() {
     newPhotoRef.set(photoData)
       .then(() => {
-        debugLog('Solicitação de foto enviada para o iPhone:', photoData);
+        debugLog('Solicitud de foto enviada al iPhone:', photoData);
         updateDriveStatus('waiting');
         
-        // Atualizar status
+        // Actualizar status
         return appState.firebaseRefs.status.update({
           lastQrCode: codeNumber,
           photoStatus: 'requested',
@@ -890,26 +889,26 @@ function notifyIphoneToCapture(codeNumber, additionalInfo) {
       })
       .catch(error => {
         currentRetry++;
-        console.error(`Erro ao notificar iPhone (tentativa ${currentRetry}):`, error);
+        console.error(`Error al notificar iPhone (intento ${currentRetry}):`, error);
         
         if (currentRetry < maxRetries) {
-          // Tentar novamente após um breve delay
+          // Intentar nuevamente después de un breve retraso
           setTimeout(attemptSave, 1000);
         } else {
           updateDriveStatus('error');
           appState.isProcessingQR = false;
           
-          // Mostrar mensagem de erro apropriada
-          alert('Erro ao comunicar com o dispositivo de captura. Por favor, tente novamente.');
+          // Mostrar mensaje de error apropiado
+          alert('Error al comunicar con el dispositivo de captura. Por favor, intente nuevamente.');
         }
       });
   }
   
-  // Primeira tentativa
+  // Primer intento
   attemptSave();
 }
 
-// Resetar display do tablet
+// Resetear pantalla del tablet
 function resetTabletDisplay() {
   const { qrMainNumber, qrSecondaryInfo } = domElements.tablet;
   
@@ -920,7 +919,7 @@ function resetTabletDisplay() {
   if (qrSecondaryInfo) {
     qrSecondaryInfo.textContent = '---------';
     
-    // Adicionar classe de estado de espera
+    // Agregar clase de estado de espera
     qrSecondaryInfo.classList.add('waiting');
   }
   
@@ -928,7 +927,7 @@ function resetTabletDisplay() {
   appState.isProcessingQR = false;
 }
 
-// Atualizar display da última foto
+// Actualizar pantalla de la última foto
 function updateLastPhotoDisplay(code) {
   if (domElements.tablet.lastPhotoCode && code) {
     domElements.tablet.lastPhotoCode.textContent = code;
@@ -939,12 +938,12 @@ function updateLastPhotoDisplay(code) {
   }
 }
 
-// Processar input de QR no tablet
+// Procesar input de QR en tablet
 function handleTabletQrInput(event) {
-  // Se já estiver processando, ignorar
+  // Si ya está procesando, ignorar
   if (appState.isProcessingQR) return;
   
-  // Detectar fim da leitura (normalmente um scanner QR envia um Enter ao final)
+  // Detectar fin de la lectura (normalmente un scanner QR envía un Enter al final)
   if (event.inputType === 'insertText' && event.data === '\n') {
     const qrText = domElements.tablet.qrInput.value.trim();
     if (qrText.length > 0) {
@@ -956,16 +955,16 @@ function handleTabletQrInput(event) {
 // Configurar Firebase para modo iPhone
 function setupFirebaseForIphone() {
   if (!appState.connectionCode || !appState.isConnectedToFirebase) {
-    updateCameraStatus('Erro: Não está conectado ao tablet', 'error');
+    updateCameraStatus('Error: No está conectado al tablet', 'error');
     return;
   }
   
-  // Exibir o código na tela da câmera
+  // Mostrar el código en la pantalla de la cámara
   if (domElements.iphone.cameraSessionDisplay) {
     domElements.iphone.cameraSessionDisplay.textContent = appState.connectionCode;
   }
   
-  // Escutar solicitações de fotos novas com tratamento de erros melhorado
+  // Escuchar solicitudes de fotos nuevas con tratamiento de errores mejorado
   try {
     appState.firebaseRefs.photos
       .orderByChild('status')
@@ -973,36 +972,36 @@ function setupFirebaseForIphone() {
       .limitToLast(1)
       .on('child_added', handleNewPhotoRequest, handlePhotoRequestError);
     
-    debugLog('Firebase configurado para modo iPhone com código:', appState.connectionCode);
+    debugLog('Firebase configurado para modo iPhone con código:', appState.connectionCode);
   } catch (error) {
-    console.error('Erro ao configurar escuta de solicitações de foto:', error);
-    updateCameraStatus('Erro ao configurar conexão com o tablet', 'error');
+    console.error('Error al configurar escucha de solicitudes de foto:', error);
+    updateCameraStatus('Error al configurar conexión con el tablet', 'error');
   }
 }
 
-// Handler para novas solicitações de foto
+// Handler para nuevas solicitudes de foto
 function handleNewPhotoRequest(snapshot) {
   try {
     const photoData = snapshot.val();
   
     if (photoData && photoData.code) {
-      debugLog('Nova solicitação de foto recebida:', photoData);
+      debugLog('Nueva solicitud de foto recibida:', photoData);
       
-      // Exibir o código no input
+      // Mostrar el código en el input
       if (domElements.iphone.qrInput) {
         domElements.iphone.qrInput.value = photoData.code;
       }
       
-      // Atualizar status
+      // Actualizar status
       updateCameraStatus(`Capturando: ${photoData.code}`);
       
-      // Mostrar "detectado" no overlay
+      // Mostrar "detectado" en el overlay
       if (domElements.iphone.scanOverlay) {
         domElements.iphone.scanOverlay.classList.remove('hidden');
         domElements.iphone.scanOverlay.classList.add('detected');
       }
       
-      // Atualizar status da foto
+      // Actualizar status de la foto
       snapshot.ref.update({
         status: 'processing',
         processingStartTime: firebase.database.ServerValue.TIMESTAMP
@@ -1013,40 +1012,40 @@ function handleNewPhotoRequest(snapshot) {
         captureTime: firebase.database.ServerValue.TIMESTAMP
       });
       
-      // Agendar captura automática
+      // Programar captura automática
       setTimeout(() => {
-        // Capturar a foto
+        // Capturar la foto
         captureAndUpload(photoData.code, snapshot.key);
       }, AUTO_CAPTURE_DELAY);
     }
   } catch (error) {
-    console.error('Erro ao processar solicitação de foto:', error);
-    updateCameraStatus('Erro ao processar solicitação', 'error');
+    console.error('Error al procesar solicitud de foto:', error);
+    updateCameraStatus('Error al procesar solicitud', 'error');
   }
 }
 
-// Handler para erro na escuta de solicitações de foto
+// Handler para error en la escucha de solicitudes de foto
 function handlePhotoRequestError(error) {
-  console.error('Erro na escuta de solicitações de foto:', error);
-  updateCameraStatus('Erro de comunicação com o tablet', 'error');
+  console.error('Error en la escucha de solicitudes de foto:', error);
+  updateCameraStatus('Error de comunicación con el tablet', 'error');
 }
 
-// Atualizar status da câmera no iPhone - Versão modificada para texto mais discreto
+// Actualizar status de la cámara en iPhone - Versión modificada para texto más discreto
 function updateCameraStatus(message, type = 'success') {
   const { simpleStatusMessage } = domElements.iphone;
   
-  // Atualizar mensagem simples
+  // Actualizar mensaje simple
   if (simpleStatusMessage) {
     simpleStatusMessage.textContent = message;
     simpleStatusMessage.style.display = 'block';
     
-    // Aplicar cor baseada no tipo
+    // Aplicar color basado en el tipo
     simpleStatusMessage.classList.remove('error');
     if (type === 'error') {
       simpleStatusMessage.classList.add('error');
     }
     
-    // Auto-esconder depois de alguns segundos se for uma mensagem de sucesso
+    // Auto-ocultar después de algunos segundos si es un mensaje de éxito
     if (type === 'success') {
       setTimeout(() => {
         simpleStatusMessage.style.display = 'none';
@@ -1055,7 +1054,7 @@ function updateCameraStatus(message, type = 'success') {
   }
 }
 
-// Desconectar do Firebase - com mecanismo de retry
+// Desconectar de Firebase - con mecanismo de retry
 function disconnectFromFirebase() {
   // Desconectar observadores
   if (appState.isConnectedToFirebase && appState.firebaseRefs.currentSession) {
@@ -1065,27 +1064,27 @@ function disconnectFromFirebase() {
       if (appState.firebaseRefs.status) appState.firebaseRefs.status.off();
       if (appState.firebaseRefs.devices) appState.firebaseRefs.devices.off();
       
-      // Registrar desconexão se estivermos em algum modo
+      // Registrar desconexión si estamos en algún modo
       if (appState.currentMode === 'tablet' && appState.firebaseRefs.devices) {
         appState.firebaseRefs.devices.child('tablet').update({
           connected: false,
           lastSeen: firebase.database.ServerValue.TIMESTAMP
-        }).catch(err => debugLog('Erro ao atualizar status tablet:', err, 'warn'));
+        }).catch(err => debugLog('Error al actualizar status tablet:', err, 'warn'));
       } else if (appState.currentMode === 'iphone' && appState.firebaseRefs.devices) {
         appState.firebaseRefs.devices.child('iphone').update({
           connected: false,
           lastSeen: firebase.database.ServerValue.TIMESTAMP
-        }).catch(err => debugLog('Erro ao atualizar status iPhone:', err, 'warn'));
+        }).catch(err => debugLog('Error al actualizar status iPhone:', err, 'warn'));
       }
       
-      // Limpar referências
+      // Limpiar referencias
       appState.firebaseRefs.currentSession = null;
       appState.firebaseRefs.photos = null;
       appState.firebaseRefs.status = null;
       appState.firebaseRefs.devices = null;
     } catch (error) {
-      debugLog('Erro ao desconectar do Firebase:', error, 'warn');
-      // Continuar mesmo com erro
+      debugLog('Error al desconectar de Firebase:', error, 'warn');
+      // Continuar incluso con error
     }
   }
   
@@ -1093,19 +1092,19 @@ function disconnectFromFirebase() {
   appState.connectionCode = null;
   appState.isConnected = false;
   
-  debugLog('Desconectado do Firebase');
+  debugLog('Desconectado de Firebase');
 }
 
-// Configurar modo tablet - com detecção de Enter aprimorada
+// Configurar modo tablet - con detección de Enter mejorada
 function setupTabletMode() {
-  // Adicionar listener para tecla Enter (muitos scanners QR enviam Enter após a leitura)
+  // Agregar listener para tecla Enter (muchos scanners QR envían Enter después de la lectura)
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' && 
         appState.currentMode === 'tablet' && 
         domElements.screens.tablet.style.display !== 'none' && 
         domElements.tablet.qrInput) {
       
-      // Verificar se o foco já está no input para evitar duplicar a entrada
+      // Verificar si el foco ya está en el input para evitar duplicar la entrada
       const activeElement = document.activeElement;
       if (activeElement !== domElements.tablet.qrInput) {
         const qrText = domElements.tablet.qrInput.value.trim();
@@ -1121,75 +1120,75 @@ function setupTabletMode() {
 function showStatusOverlay(state) {
   const { statusOverlay, simpleStatusMessage } = domElements.iphone;
   
-  // Esconder o overlay de status antigo
+  // Ocultar el overlay de status antiguo
   if (statusOverlay) {
     statusOverlay.classList.add('hidden');
   }
   
-  // Em vez disso, usar nossa mensagem simples
+  // En vez de esto, usar nuestro mensaje simple
   if (simpleStatusMessage) {
     if (state === 'uploading') {
       updateCameraStatus('Enviando foto...');
     } else if (state === 'success') {
-      updateCameraStatus('Foto enviada com sucesso!');
+      updateCameraStatus('¡Foto enviada con éxito!');
     } else if (state === 'error') {
-      updateCameraStatus('Erro ao enviar foto', 'error');
+      updateCameraStatus('Error al enviar foto', 'error');
     } else {
       simpleStatusMessage.style.display = 'none';
     }
   }
 }
 
-// Carregar bibliotecas Google - com timeout e tratamento de erro
+// Cargar bibliotecas Google - con timeout y manejo de error
 function loadGoogleLibraries() {
-  // Definir um timeout para fallback se carregamento falhar
+  // Definir un timeout para fallback si la carga falla
   const loadTimeout = setTimeout(() => {
-    debugLog('Timeout ao carregar bibliotecas Google', null, 'warn');
+    debugLog('Timeout al cargar bibliotecas Google', null, 'warn');
     handleGoogleLibrariesError();
   }, 10000);
   
-  // Carregar o script GAPI
+  // Cargar el script GAPI
   const gapiScript = document.createElement('script');
   gapiScript.src = 'https://apis.google.com/js/api.js';
   gapiScript.async = true;
   gapiScript.defer = true;
   gapiScript.onload = () => {
-    clearTimeout(loadTimeout); // Limpar timeout ao carregar com sucesso
+    clearTimeout(loadTimeout); // Limpiar timeout al cargar con éxito
     initializeGapiClient();
   };
   gapiScript.onerror = handleGoogleLibrariesError;
   document.head.appendChild(gapiScript);
   
-  // Carregar o script Google Identity Services
+  // Cargar el script Google Identity Services
   const gisScript = document.createElement('script');
   gisScript.src = 'https://accounts.google.com/gsi/client';
   gisScript.async = true;
   gisScript.defer = true;
   gisScript.onload = () => {
-    clearTimeout(loadTimeout); // Limpar timeout ao carregar com sucesso
+    clearTimeout(loadTimeout); // Limpiar timeout al cargar con éxito
     initializeGisClient();
   };
   gisScript.onerror = handleGoogleLibrariesError;
   document.head.appendChild(gisScript);
   
-  debugLog('Carregando bibliotecas Google...');
+  debugLog('Cargando bibliotecas Google...');
 }
 
-// Handler para erro no carregamento das bibliotecas Google
+// Handler para error en la carga de las bibliotecas Google
 function handleGoogleLibrariesError() {
-  console.error('Erro ao carregar bibliotecas Google');
+  console.error('Error al cargar bibliotecas Google');
   if (appState.currentMode === 'iphone') {
-    updateCameraStatus('Erro ao carregar ferramentas de upload. Verifique sua conexão.', 'error');
+    updateCameraStatus('Error al cargar herramientas de subida. Verifique su conexión.', 'error');
   } else {
-    alert('Não foi possível carregar as bibliotecas necessárias. Por favor, verifique sua conexão e recarregue a página.');
+    alert('No fue posible cargar las bibliotecas necesarias. Por favor, verifique su conexión y recargue la página.');
   }
 }
 
-// Inicializar GAPI com tratamento de erro
+// Inicializar GAPI con manejo de error
 async function initializeGapiClient() {
   try {
     await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('Timeout ao carregar GAPI client')), 5000);
+      const timeout = setTimeout(() => reject(new Error('Timeout al cargar GAPI client')), 5000);
       gapi.load('client', () => {
         clearTimeout(timeout);
         resolve();
@@ -1204,25 +1203,25 @@ async function initializeGapiClient() {
     appState.gapiInited = true;
     maybeEnableButtons();
     
-    // Se tiver um token salvo, verificar sua validade
+    // Si tiene un token guardado, verificar su validez
     if (appState.accessToken) {
       validateSavedToken();
     }
   } catch (err) {
-    console.error('Erro ao inicializar GAPI client:', err);
+    console.error('Error al inicializar GAPI client:', err);
     appState.gapiInited = false;
     maybeEnableButtons();
     
     if (appState.currentMode === 'iphone') {
-      updateCameraStatus('Erro ao conectar com Google Drive. Tente novamente.', 'error');
+      updateCameraStatus('Error al conectar con Google Drive. Intente nuevamente.', 'error');
     }
   }
 }
 
-// Verificar se o token salvo ainda é válido
+// Verificar si el token guardado aún es válido
 async function validateSavedToken() {
   try {
-    // Tentar fazer uma requisição ao Drive API para verificar se o token é válido
+    // Intentar hacer una petición a Drive API para verificar si el token es válido
     const response = await gapi.client.request({
       path: 'https://www.googleapis.com/drive/v3/files?fields=files(id,name)&pageSize=1',
       method: 'GET',
@@ -1231,13 +1230,13 @@ async function validateSavedToken() {
       }
     });
     
-    // Se chegou aqui, o token é válido
-    console.log('Token de autenticação validado com sucesso');
+    // Si llegó aquí, el token es válido
+    console.log('Token de autenticación validado con éxito');
     
-    // Atualizar UI se necessário
+    // Actualizar UI si es necesario
     updateAuthUIState(true);
     
-    // Se estamos no modo iPhone e já autenticados, mostrar a tela da câmera
+    // Si estamos en modo iPhone y ya autenticados, mostrar la pantalla de la cámara
     if (appState.currentMode === 'iphone' && domElements.screens.login.style.display !== 'none') {
       showScreen(domElements.screens.camera);
       if (!appState.isCameraInitialized) {
@@ -1248,17 +1247,17 @@ async function validateSavedToken() {
       setupFirebaseForIphone();
     }
   } catch (err) {
-    console.error('Erro ao validar token salvo:', err);
+    console.error('Error al validar token guardado:', err);
     
-    // Token inválido ou expirado, removê-lo
+    // Token inválido o expirado, eliminarlo
     try {
       localStorage.removeItem(appState.authStorageKey);
     } catch (e) {
-      // Falha silenciosa se não conseguir remover
+      // Falla silenciosa si no se puede eliminar
     }
     appState.accessToken = null;
     
-    // Atualizar UI
+    // Actualizar UI
     updateAuthUIState(false);
   }
 }
@@ -1269,57 +1268,57 @@ function initializeGisClient() {
     appState.tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: CLIENT_ID,
       scope: SCOPES,
-      prompt: '', // Usar '' para não exibir o prompt quando possível
+      prompt: '', // Usar '' para no mostrar el prompt cuando sea posible
       callback: handleTokenResponse,
       error_callback: handleAuthError
     });
     appState.gisInited = true;
     maybeEnableButtons();
   } catch (error) {
-    console.error('Erro ao inicializar Google Identity Services:', error);
+    console.error('Error al inicializar Google Identity Services:', error);
     appState.gisInited = false;
     maybeEnableButtons();
     
     if (appState.currentMode === 'iphone') {
-      updateCameraStatus('Erro ao configurar autenticação. Tente novamente.', 'error');
+      updateCameraStatus('Error al configurar autenticación. Intente nuevamente.', 'error');
     }
   }
 }
 
-// Handler para resposta de token
+// Handler para respuesta de token
 function handleTokenResponse(tokenResponse) {
   if (tokenResponse && tokenResponse.access_token) {
     appState.accessToken = tokenResponse.access_token;
     
-    // Salvar o token para uso futuro
+    // Guardar el token para uso futuro
     try {
       localStorage.setItem(appState.authStorageKey, appState.accessToken);
     } catch (err) {
-      console.warn('Não foi possível salvar o token:', err);
+      console.warn('No fue posible guardar el token:', err);
     }
     
     updateAuthUIState(true);
     
-    // Iniciar câmera e tela principal
+    // Iniciar cámara y pantalla principal
     showScreen(domElements.screens.camera);
     if (!appState.isCameraInitialized) {
       setupCamera();
       appState.isCameraInitialized = true;
     }
     
-    // Configurar Firebase para iPhone (já deve estar configurado na conexão)
+    // Configurar Firebase para iPhone (ya debe estar configurado en la conexión)
     setupFirebaseForIphone();
   }
 }
 
-// Handler para erro de autenticação
+// Handler para error de autenticación
 function handleAuthError(err) {
-  console.error('Erro na autenticação:', err);
-  updateCameraStatus('Falha na autenticação', 'error');
+  console.error('Error en la autenticación:', err);
+  updateCameraStatus('Falla en la autenticación', 'error');
   updateAuthUIState(false);
 }
 
-// Ativar botões quando as bibliotecas estiverem carregadas
+// Activar botones cuando las bibliotecas estén cargadas
 function maybeEnableButtons() {
   const { googleAuthBtn } = domElements.iphone;
   const { loginBtn } = domElements.iphone;
@@ -1330,24 +1329,24 @@ function maybeEnableButtons() {
   if (loginBtn) loginBtn.disabled = !librariesReady;
 }
 
-// Atualizar estado visual dos botões de autenticação
+// Actualizar estado visual de los botones de autenticación
 function updateAuthUIState(isLoggedIn) {
   const { googleAuthBtn, loginBtn } = domElements.iphone;
   
   if (googleAuthBtn) {
     googleAuthBtn.classList.toggle('logged-in', isLoggedIn);
-    googleAuthBtn.setAttribute('title', isLoggedIn ? 'Atualizar Autorização' : 'Entrar com Google');
+    googleAuthBtn.setAttribute('title', isLoggedIn ? 'Actualizar Autorización' : 'Iniciar con Google');
     googleAuthBtn.disabled = false;
   }
   
   if (loginBtn) {
-    loginBtn.textContent = isLoggedIn ? 'Continuar como Câmera' : 'Fazer Login com Google';
+    loginBtn.textContent = isLoggedIn ? 'Continuar como Cámara' : 'Iniciar Sesión con Google';
     loginBtn.classList.toggle('logged-in', isLoggedIn);
     loginBtn.disabled = false;
   }
 }
 
-// Configurar o botão de autenticação do Google
+// Configurar el botón de autenticación de Google
 function setupGoogleAuth() {
   const { googleAuthBtn } = domElements.iphone;
   
@@ -1357,7 +1356,7 @@ function setupGoogleAuth() {
   }
 }
 
-// Configurar botão de login
+// Configurar botón de login
 function setupLoginButton() {
   const { loginBtn } = domElements.iphone;
   
@@ -1366,7 +1365,7 @@ function setupLoginButton() {
   }
 }
 
-// Lidar com o clique no botão de autenticação
+// Manejar el clic en el botón de autenticación
 function handleAuthClick() {
   const { googleAuthBtn, loginBtn } = domElements.iphone;
   
@@ -1374,7 +1373,7 @@ function handleAuthClick() {
   if (loginBtn) loginBtn.disabled = true;
   
   if (appState.accessToken) {
-    // Se já estiver autenticado, ir para a tela da câmera
+    // Si ya está autenticado, ir a la pantalla de la cámara
     showScreen(domElements.screens.camera);
     if (!appState.isCameraInitialized) {
       setupCamera();
@@ -1384,38 +1383,38 @@ function handleAuthClick() {
     // Configurar Firebase para iPhone
     setupFirebaseForIphone();
   } else {
-    // Iniciar processo de autenticação com prompt silencioso primeiro
+    // Iniciar proceso de autenticación con prompt silencioso primero
     try {
       appState.tokenClient.requestAccessToken({prompt: ''});
     } catch (err) {
-      // Se falhar com prompt silencioso, usar o prompt padrão
-      console.log('Autenticação silenciosa falhou, usando prompt explícito');
+      // Si falla con prompt silencioso, usar el prompt predeterminado
+      console.log('Autenticación silenciosa falló, usando prompt explícito');
       appState.tokenClient.requestAccessToken({prompt: 'consent'});
     }
   }
 }
 
-// Função para obter as configurações ideais de câmera para modo landscape
+// Función para obtener las configuraciones ideales de cámara para modo horizontal
 async function getBestCameraSettings() {
   try {
-    // Verificar dispositivos disponíveis
+    // Verificar dispositivos disponibles
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videoDevices = devices.filter(device => device.kind === 'videoinput');
     
     if (videoDevices.length === 0) {
-      throw new Error('Nenhuma câmera encontrada');
+      throw new Error('Ninguna cámara encontrada');
     }
     
-    // Identificar a câmera traseira para melhor qualidade
+    // Identificar la cámara trasera para mejor calidad
     const rearCamera = videoDevices.find(device => 
       device.label.toLowerCase().includes('back') || 
-      device.label.toLowerCase().includes('traseira') ||
+      device.label.toLowerCase().includes('trasera') ||
       device.label.toLowerCase().includes('rear')
     );
     
     const deviceId = rearCamera ? rearCamera.deviceId : videoDevices[0].deviceId;
     
-    // Configurações otimizadas para iPhone
+    // Configuraciones optimizadas para iPhone
     if (deviceDetection.isIOS) {
       return {
         audio: false,
@@ -1442,8 +1441,8 @@ async function getBestCameraSettings() {
       };
     }
   } catch (err) {
-    console.error('Erro ao configurar câmera:', err);
-    // Configuração fallback
+    console.error('Error al configurar cámara:', err);
+    // Configuración fallback
     return {
       audio: false,
       video: { 
@@ -1453,7 +1452,7 @@ async function getBestCameraSettings() {
   }
 }
 
-// Inicializar a câmera no modo horizontal com retry e feedback
+// Inicializar la cámara en modo horizontal con retry y feedback
 async function setupCamera() {
   const maxAttempts = 3;
   let attempt = 0;
@@ -1462,9 +1461,9 @@ async function setupCamera() {
     attempt++;
     
     try {
-      updateCameraStatus(`Configurando câmera (tentativa ${attempt})...`);
+      updateCameraStatus(`Configurando cámara (intento ${attempt})...`);
       
-      // Primeiro inicie a câmera com configurações básicas
+      // Primero inicie la cámara con configuraciones básicas
       let initialConstraints = {
         audio: false,
         video: {
@@ -1472,17 +1471,17 @@ async function setupCamera() {
         }
       };
       
-      // Solicitar acesso à câmera com configurações básicas primeiro
+      // Solicitar acceso a la cámara con configuraciones básicas primero
       const stream = await navigator.mediaDevices.getUserMedia(initialConstraints);
       
-      // Aplicar o stream ao elemento de vídeo
+      // Aplicar el stream al elemento de video
       domElements.iphone.camera.srcObject = stream;
       appState.mediaStream = stream;
       
-      // Aguardar o carregamento dos metadados do vídeo
+      // Esperar la carga de los metadatos del video
       await new Promise((resolve, reject) => {
         const timeoutId = setTimeout(() => {
-          reject(new Error('Timeout ao carregar metadados do vídeo'));
+          reject(new Error('Timeout al cargar metadatos del video'));
         }, 5000);
         
         domElements.iphone.camera.onloadedmetadata = () => {
@@ -1491,11 +1490,11 @@ async function setupCamera() {
         };
       });
 
-      // Aguardar o vídeo começar a tocar
+      // Esperar que el video comience a reproducirse
       await new Promise((resolve, reject) => {
         const timeoutId = setTimeout(() => {
-          // Não rejeitar, apenas tentar continuar
-          console.warn('Timeout ao aguardar vídeo começar a tocar');
+          // No rechazar, solo intentar continuar
+          console.warn('Timeout al esperar que el video comience a reproducirse');
           resolve();
         }, 3000);
         
@@ -1505,41 +1504,41 @@ async function setupCamera() {
         };
       });
       
-      // Tentar aplicar configurações avançadas
+      // Intentar aplicar configuraciones avanzadas
       await optimizeCameraSettings(stream);
       
-      // Atualizar dimensões do canvas
+      // Actualizar dimensiones del canvas
       updateCanvasDimensions();
       
-      updateCameraStatus('Câmera pronta');
+      updateCameraStatus('Cámara lista');
       appState.isCameraInitialized = true;
-      return; // Sucesso, sair da função
+      return; // Éxito, salir de la función
     } catch (err) {
-      console.error(`Erro ao inicializar câmera (tentativa ${attempt}):`, err);
+      console.error(`Error al inicializar cámara (intento ${attempt}):`, err);
       
-      // Limpar recurso se houver
+      // Limpiar recurso si existe
       if (appState.mediaStream) {
         try {
           appState.mediaStream.getTracks().forEach(track => track.stop());
         } catch (e) {
-          // Ignorar erros na limpeza
+          // Ignorar errores en la limpieza
         }
         appState.mediaStream = null;
       }
       
-      // Se não for a última tentativa
+      // Si no es el último intento
       if (attempt < maxAttempts) {
-        // Aguardar um pouco antes de tentar novamente
+        // Esperar un poco antes de intentar nuevamente
         await new Promise(resolve => setTimeout(resolve, 1000));
-        updateCameraStatus('Tentando novamente...');
+        updateCameraStatus('Intentando nuevamente...');
       } else {
-        // Última tentativa falhou, mostrar erro
-        updateCameraStatus('Erro ao acessar câmera: ' + err.message, 'error');
+        // Último intento falló, mostrar error
+        updateCameraStatus('Error al acceder a la cámara: ' + err.message, 'error');
         
-        // Solicitar ao usuário para verificar permissões
+        // Solicitar al usuario verificar permisos
         setTimeout(() => {
-          if (confirm('Não foi possível acessar a câmera. Verifique se você concedeu permissão para o uso da câmera e tente novamente.')) {
-            // Tentar inicializar novamente se o usuário concordar
+          if (confirm('No fue posible acceder a la cámara. Verifique si otorgó permiso para el uso de la cámara e intente nuevamente.')) {
+            // Intentar inicializar nuevamente si el usuario está de acuerdo
             setupCamera();
           }
         }, 1000);
@@ -1548,13 +1547,13 @@ async function setupCamera() {
   }
 }
 
-// Otimizar configurações da câmera
+// Optimizar configuraciones de la cámara
 async function optimizeCameraSettings(stream) {
   try {
     const videoTrack = stream.getVideoTracks()[0];
     
     if (videoTrack) {
-      // Em dispositivos iOS, isso pode falhar, mas tentamos mesmo assim
+      // En dispositivos iOS, esto puede fallar, pero lo intentamos de todos modos
       try {
         await videoTrack.applyConstraints({
           width: { ideal: TARGET_WIDTH },
@@ -1562,20 +1561,20 @@ async function optimizeCameraSettings(stream) {
           frameRate: { ideal: 30 }
         });
         
-        console.log('Aplicadas configurações avançadas à câmera');
+        console.log('Aplicadas configuraciones avanzadas a la cámara');
       } catch (constraintErr) {
-        console.warn('Não foi possível aplicar configurações avançadas:', constraintErr);
-        // Continuar mesmo com erro
+        console.warn('No fue posible aplicar configuraciones avanzadas:', constraintErr);
+        // Continuar incluso con error
       }
       
-      // Obter configurações atuais da câmera
+      // Obtener configuraciones actuales de la cámara
       appState.currentVideoSettings = videoTrack.getSettings();
-      console.log('Configurações atuais da câmera:', appState.currentVideoSettings);
+      console.log('Configuraciones actuales de la cámara:', appState.currentVideoSettings);
       
-      // Tentar aplicar foco contínuo e exposição automática
+      // Intentar aplicar enfoque continuo y exposición automática
       if (!deviceDetection.isSafari) {
         const capabilities = videoTrack.getCapabilities();
-        console.log('Capacidades da câmera:', capabilities);
+        console.log('Capacidades de la cámara:', capabilities);
         
         if (capabilities) {
           const constraints = {};
@@ -1592,36 +1591,36 @@ async function optimizeCameraSettings(stream) {
             try {
               await videoTrack.applyConstraints(constraints);
               appState.currentVideoSettings = videoTrack.getSettings();
-              console.log('Configurações de foco e exposição aplicadas');
+              console.log('Configuraciones de enfoque y exposición aplicadas');
             } catch (e) {
-              console.warn('Erro ao aplicar configurações de foco/exposição:', e);
+              console.warn('Error al aplicar configuraciones de enfoque/exposición:', e);
             }
           }
         }
       }
     }
   } catch (err) {
-    console.warn('Erro ao otimizar configurações da câmera:', err);
-    // Continuar mesmo com erro
+    console.warn('Error al optimizar configuraciones de la cámara:', err);
+    // Continuar incluso con error
   }
 }
 
-// Atualizar dimensões do canvas com base no vídeo atual
+// Actualizar dimensiones del canvas basado en el video actual
 function updateCanvasDimensions() {
   const { camera, canvas } = domElements.iphone;
   
   if (!camera || !camera.videoWidth || !camera.videoHeight || !canvas) return;
   
-  // Garantir que o canvas tenha as dimensões alvo para captura de alta qualidade
+  // Asegurar que el canvas tenga las dimensiones objetivo para captura de alta calidad
   canvas.width = TARGET_WIDTH;
   canvas.height = TARGET_HEIGHT;
   
-  // Verificar se as dimensões do vídeo são menores que o alvo (possível limitação do dispositivo)
+  // Verificar si las dimensiones del video son menores que el objetivo (posible limitación del dispositivo)
   if (camera.videoWidth < TARGET_WIDTH || camera.videoHeight < TARGET_HEIGHT) {
-    console.warn(`Alerta: Dimensões do vídeo (${camera.videoWidth}x${camera.videoHeight}) são menores que o alvo (${TARGET_WIDTH}x${TARGET_HEIGHT}). A qualidade pode ser limitada pelo hardware.`);
+    console.warn(`Alerta: Dimensiones del video (${camera.videoWidth}x${camera.videoHeight}) son menores que el objetivo (${TARGET_WIDTH}x${TARGET_HEIGHT}). La calidad puede estar limitada por el hardware.`);
   }
   
-  debugLog('Canvas configurado com dimensões:', {
+  debugLog('Canvas configurado con dimensiones:', {
     width: canvas.width,
     height: canvas.height,
     videoWidth: camera.videoWidth,
@@ -1629,30 +1628,30 @@ function updateCanvasDimensions() {
   });
 }
 
-// Capturar imagem em alta qualidade (4032x3024)
+// Capturar imagen en alta calidad (4032x3024)
 function captureHighQualityImage(sourceElement) {
   return new Promise((resolve, reject) => {
     try {
       const { canvas } = domElements.iphone;
       if (!canvas) {
-        throw new Error('Canvas não disponível');
+        throw new Error('Canvas no disponible');
       }
       
-      // Verificar disponibilidade do vídeo e dimensões
+      // Verificar disponibilidad del video y dimensiones
       const videoWidth = sourceElement.videoWidth;
       const videoHeight = sourceElement.videoHeight;
       
       if (!videoWidth || !videoHeight) {
-        throw new Error('Dimensões de vídeo indisponíveis');
+        throw new Error('Dimensiones de video no disponibles');
       }
       
-      console.log(`Capturando imagem do vídeo com dimensões: ${videoWidth}x${videoHeight}`);
+      console.log(`Capturando imagen del video con dimensiones: ${videoWidth}x${videoHeight}`);
       
-      // Ajustar dimensões do canvas para corresponder ao alvo
+      // Ajustar dimensiones del canvas para corresponder al objetivo
       canvas.width = TARGET_WIDTH;
       canvas.height = TARGET_HEIGHT;
       
-      // Configurar canvas para máxima qualidade
+      // Configurar canvas para máxima calidad
       const ctx = canvas.getContext('2d', { 
         alpha: false,
         desynchronized: true,
@@ -1660,86 +1659,86 @@ function captureHighQualityImage(sourceElement) {
       });
       
       if (!ctx) {
-        throw new Error('Não foi possível obter contexto do canvas');
+        throw new Error('No fue posible obtener contexto del canvas');
       }
       
-      // Importantes configurações de qualidade
+      // Importantes configuraciones de calidad
       ctx.imageSmoothingEnabled = false;
       ctx.imageSmoothingQuality = 'high';
       
-      // Limpar canvas antes de desenhar
+      // Limpiar canvas antes de dibujar
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      // Calcular dimensões preservando ao máximo a resolução
-      // Use o máximo da resolução disponível do vídeo
+      // Calcular dimensiones preservando al máximo la resolución
+      // Usar el máximo de la resolución disponible del video
       const sourceRatio = videoWidth / videoHeight;
       const targetRatio = TARGET_WIDTH / TARGET_HEIGHT;
       
-      // Variáveis para o recorte
+      // Variables para el recorte
       let sx = 0, sy = 0, sw = videoWidth, sh = videoHeight;
       
-      // Calcular o recorte com maior precisão
+      // Calcular el recorte con mayor precisión
       if (Math.abs(sourceRatio - targetRatio) > 0.001) {
         if (sourceRatio > targetRatio) {
-          // Vídeo é mais largo, recortar nas laterais
+          // Video es más ancho, recortar en los laterales
           sw = videoHeight * targetRatio;
           sx = Math.floor((videoWidth - sw) / 2);
         } else {
-          // Vídeo é mais alto, recortar cima/baixo
+          // Video es más alto, recortar arriba/abajo
           sh = videoWidth / targetRatio;
           sy = Math.floor((videoHeight - sh) / 2);
         }
       }
       
-      // Usar números inteiros para evitar cálculos subpixel
+      // Usar números enteros para evitar cálculos subpixel
       sx = Math.floor(sx);
       sy = Math.floor(sy);
       sw = Math.floor(sw);
       sh = Math.floor(sh);
       
-      // Desenhar no canvas, preservando a qualidade máxima
+      // Dibujar en el canvas, preservando la calidad máxima
       ctx.drawImage(
         sourceElement,
         sx, sy, sw, sh,
         0, 0, canvas.width, canvas.height
       );
       
-      // Definir um timeout para caso a conversão demore muito
+      // Definir un timeout para caso la conversión demore mucho
       const blobTimeout = setTimeout(() => {
-        reject(new Error('Timeout ao gerar blob da imagem'));
+        reject(new Error('Timeout al generar blob de la imagen'));
       }, 5000);
       
-      // Capturar com qualidade máxima
+      // Capturar con calidad máxima
       canvas.toBlob(blob => {
         clearTimeout(blobTimeout);
         
         if (!blob) {
-          reject(new Error('Falha ao gerar blob da imagem'));
+          reject(new Error('Falla al generar blob de la imagen'));
           return;
         }
         
-        console.log(`Imagem capturada: ${blob.size} bytes`);
+        console.log(`Imagen capturada: ${blob.size} bytes`);
         resolve(blob);
       }, IMAGE_FORMAT, IMAGE_QUALITY);
       
     } catch (err) {
-      console.error('Erro ao capturar imagem:', err);
+      console.error('Error al capturar imagen:', err);
       reject(err);
     }
   });
 }
 
-// Função principal de captura e upload com retry automatizado
+// Función principal de captura y upload con retry automatizado
 async function captureAndUpload(codeNumber, photoKey) {
-  // Verificar se está logado
+  // Verificar si está logueado
   if (!appState.accessToken) {
-    updateCameraStatus('Faça login antes de capturar fotos', 'error');
+    updateCameraStatus('Inicie sesión antes de capturar fotos', 'error');
     return;
   }
   
-  // Verificar se a câmera está disponível
+  // Verificar si la cámara está disponible
   if (!appState.mediaStream) {
-    updateCameraStatus('Câmera não disponível', 'error');
+    updateCameraStatus('Cámara no disponible', 'error');
     return;
   }
   
@@ -1748,7 +1747,7 @@ async function captureAndUpload(codeNumber, photoKey) {
   
   while (attempt <= maxRetries) {
     try {
-      // Atualizar status Firebase
+      // Actualizar status Firebase
       if (appState.firebaseRefs.status) {
         appState.firebaseRefs.status.update({
           photoStatus: 'capturing',
@@ -1756,7 +1755,7 @@ async function captureAndUpload(codeNumber, photoKey) {
         });
       }
       
-      // Atualizar status da foto específica
+      // Actualizar status de la foto específica
       if (appState.firebaseRefs.photos && photoKey) {
         appState.firebaseRefs.photos.child(photoKey).update({
           status: 'capturing',
@@ -1764,22 +1763,22 @@ async function captureAndUpload(codeNumber, photoKey) {
         });
       }
       
-      // Exibir mensagem simples
+      // Mostrar mensaje simple
       updateCameraStatus(`Capturando: ${codeNumber}`);
       
-      // Definir nome do arquivo com extensão baseada no formato
+      // Definir nombre del archivo con extensión basada en el formato
       const extension = IMAGE_FORMAT === 'image/png' ? '.png' : '.jpg';
       const fileName = `${codeNumber}${extension}`;
       
-      console.log('Capturando imagem com nome:', fileName);
+      console.log('Capturando imagen con nombre:', fileName);
       
-      // Capturar imagem em alta qualidade
+      // Capturar imagen en alta calidad
       const imageBlob = await captureHighQualityImage(domElements.iphone.camera);
       
-      // Mostrar mensagem de captura
-      updateCameraStatus('Enviando para o Drive...');
+      // Mostrar mensaje de captura
+      updateCameraStatus('Enviando a Drive...');
       
-      // Atualizar status Firebase
+      // Actualizar status Firebase
       if (appState.firebaseRefs.status) {
         appState.firebaseRefs.status.update({
           photoStatus: 'uploading',
@@ -1787,7 +1786,7 @@ async function captureAndUpload(codeNumber, photoKey) {
         });
       }
       
-      // Atualizar status da foto específica
+      // Actualizar status de la foto específica
       if (appState.firebaseRefs.photos && photoKey) {
         appState.firebaseRefs.photos.child(photoKey).update({
           status: 'uploading',
@@ -1795,24 +1794,24 @@ async function captureAndUpload(codeNumber, photoKey) {
         });
       }
       
-      // Enviar para o Google Drive
+      // Enviar a Google Drive
       await uploadToDrive(imageBlob, fileName, photoKey);
       
-      // Se chegamos aqui, sucesso!
+      // Si llegamos aquí, éxito!
       break;
     } catch (err) {
       attempt++;
-      console.error(`Erro na captura (tentativa ${attempt}/${maxRetries+1}):`, err);
+      console.error(`Error en la captura (intento ${attempt}/${maxRetries+1}):`, err);
       
       if (attempt <= maxRetries) {
-        // Tentar novamente após uma pequena pausa
-        updateCameraStatus(`Tentando novamente (${attempt}/${maxRetries})...`);
+        // Intentar nuevamente después de una pequeña pausa
+        updateCameraStatus(`Intentando nuevamente (${attempt}/${maxRetries})...`);
         await new Promise(resolve => setTimeout(resolve, 1000));
       } else {
-        // Desistir após todas as tentativas
-        updateCameraStatus('Erro ao capturar: ' + (err.message || 'Falha desconhecida'), 'error');
+        // Desistir después de todos los intentos
+        updateCameraStatus('Error al capturar: ' + (err.message || 'Falla desconocida'), 'error');
         
-        // Atualizar status Firebase
+        // Actualizar status Firebase
         if (appState.firebaseRefs.status) {
           appState.firebaseRefs.status.update({
             photoStatus: 'error',
@@ -1821,7 +1820,7 @@ async function captureAndUpload(codeNumber, photoKey) {
           });
         }
         
-        // Atualizar status da foto específica
+        // Actualizar status de la foto específica
         if (appState.firebaseRefs.photos && photoKey) {
           appState.firebaseRefs.photos.child(photoKey).update({
             status: 'error',
@@ -1834,7 +1833,7 @@ async function captureAndUpload(codeNumber, photoKey) {
   }
 }
 
-// Upload para o Google Drive com backoff exponencial e retries
+// Upload a Google Drive con backoff exponencial y retries
 async function uploadToDrive(blob, filename, photoKey) {
   const maxRetries = 3;
   let retry = 0;
@@ -1843,86 +1842,86 @@ async function uploadToDrive(blob, filename, photoKey) {
   while (retry <= maxRetries) {
     try {
       if (!appState.accessToken) {
-        updateCameraStatus('Por favor, faça login primeiro', 'error');
+        updateCameraStatus('Por favor, inicie sesión primero', 'error');
         return;
       }
       
-      // Verificar tamanho da imagem
+      // Verificar tamaño de la imagen
       const blobSizeMB = blob.size / (1024 * 1024);
-      console.log(`Tamanho da imagem: ${blobSizeMB.toFixed(2)} MB`);
+      console.log(`Tamaño de la imagen: ${blobSizeMB.toFixed(2)} MB`);
       
       if (blobSizeMB > 10) {
-        updateCameraStatus(`Enviando imagem de ${blobSizeMB.toFixed(1)} MB...`);
+        updateCameraStatus(`Enviando imagen de ${blobSizeMB.toFixed(1)} MB...`);
       }
       
-      // Garantir nome de arquivo correto
+      // Garantizar nombre de archivo correcto
       const extension = IMAGE_FORMAT === 'image/png' ? '.png' : '.jpg';
       const fileNameWithExt = filename.endsWith(extension) ? 
                             filename : 
                             filename.replace(/\.[^/.]+$/, "") + extension;
       
-      console.log('Iniciando upload com nome:', fileNameWithExt);
+      console.log('Iniciando upload con nombre:', fileNameWithExt);
       
-      // Preparar metadados do arquivo
+      // Preparar metadatos del archivo
       const metadata = {
         name: fileNameWithExt,
         mimeType: IMAGE_FORMAT,
         parents: [FOLDER_ID]
       };
       
-      // Tentar primeiro método de upload (multipart)
+      // Intentar primer método de upload (multipart)
       try {
         const response = await uploadMultipart(blob, metadata);
         await handleSuccessfulUpload(response, photoKey);
-        return; // Upload bem-sucedido, sair da função
+        return; // Upload exitoso, salir de la función
       } catch (err) {
-        console.error(`Erro no método de upload principal (tentativa ${retry + 1}):`, err);
+        console.error(`Error en el método de upload principal (intento ${retry + 1}):`, err);
         
-        // Tentar método alternativo
+        // Intentar método alternativo
         try {
           const response = await uploadWithFetch(blob, metadata);
           await handleSuccessfulUpload(response, photoKey);
-          return; // Upload bem-sucedido, sair da função
+          return; // Upload exitoso, salir de la función
         } catch (fetchErr) {
-          console.error(`Erro no método de upload alternativo (tentativa ${retry + 1}):`, fetchErr);
+          console.error(`Error en el método de upload alternativo (intento ${retry + 1}):`, fetchErr);
           
           retry++;
           
           if (retry <= maxRetries) {
             // Backoff exponencial
-            updateCameraStatus(`Tentando novamente em ${backoffDelay/1000}s...`);
+            updateCameraStatus(`Intentando nuevamente en ${backoffDelay/1000}s...`);
             await new Promise(resolve => setTimeout(resolve, backoffDelay));
-            backoffDelay *= 2; // Dobra o tempo de espera para a próxima tentativa
+            backoffDelay *= 2; // Dobla el tiempo de espera para el próximo intento
           } else {
-            // Falhou em todas as tentativas
-            throw new Error("Falha após várias tentativas de upload: " + (fetchErr.message || "Erro desconhecido"));
+            // Falló en todos los intentos
+            throw new Error("Falla después de varios intentos de upload: " + (fetchErr.message || "Error desconocido"));
           }
         }
       }
     } catch (err) {
       if (retry >= maxRetries) {
-        console.error('Erro fatal na operação de upload:', err);
-        updateCameraStatus('Falha no upload: ' + (err.message || 'Erro desconhecido'), 'error');
+        console.error('Error fatal en la operación de upload:', err);
+        updateCameraStatus('Falla en el upload: ' + (err.message || 'Error desconocido'), 'error');
         
-        // Atualizar Firebase com erro
+        // Actualizar Firebase con error
         if (appState.firebaseRefs.status) {
           appState.firebaseRefs.status.update({
             photoStatus: 'error',
-            errorMessage: err.message || 'Erro na operação de upload',
+            errorMessage: err.message || 'Error en la operación de upload',
             errorTime: firebase.database.ServerValue.TIMESTAMP
           });
         }
         
-        // Atualizar status da foto específica
+        // Actualizar status de la foto específica
         if (appState.firebaseRefs.photos && photoKey) {
           appState.firebaseRefs.photos.child(photoKey).update({
             status: 'error',
-            errorMessage: err.message || 'Erro na operação de upload',
+            errorMessage: err.message || 'Error en la operación de upload',
             errorTime: firebase.database.ServerValue.TIMESTAMP
           });
         }
         
-        break; // Sair do loop após atualizar status
+        break; // Salir del loop después de actualizar status
       }
       
       retry++;
@@ -1931,7 +1930,7 @@ async function uploadToDrive(blob, filename, photoKey) {
   }
 }
 
-// Método principal de upload para o Drive via multipart
+// Método principal de upload para Drive vía multipart
 async function uploadMultipart(blob, metadata) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -1939,10 +1938,10 @@ async function uploadMultipart(blob, metadata) {
     
     reader.onloadend = async function() {
       try {
-        // Remover cabeçalho do base64
+        // Remover encabezado del base64
         const base64Data = reader.result.split(',')[1];
         
-        // Criar corpo multipart com nome do arquivo
+        // Crear body multipart con nombre del archivo
         const body = createMultipartBody(metadata, base64Data);
         
         const response = await gapi.client.request({
@@ -1962,12 +1961,12 @@ async function uploadMultipart(blob, metadata) {
     };
     
     reader.onerror = function(error) {
-      reject(new Error("Erro ao ler arquivo: " + error));
+      reject(new Error("Error al leer archivo: " + error));
     };
   });
 }
 
-// Método alternativo de upload para o Drive via fetch
+// Método alternativo de upload para Drive vía fetch
 async function uploadWithFetch(blob, metadata) {
   const form = new FormData();
   form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
@@ -1984,17 +1983,17 @@ async function uploadWithFetch(blob, metadata) {
   
   if (!fetchResponse.ok) {
     const errorData = await fetchResponse.json();
-    throw new Error(errorData.error?.message || `Erro HTTP: ${fetchResponse.status}`);
+    throw new Error(errorData.error?.message || `Error HTTP: ${fetchResponse.status}`);
   }
   
   return await fetchResponse.json();
 }
 
-// Processa upload bem-sucedido
+// Procesa upload exitoso
 async function handleSuccessfulUpload(response, photoKey) {
   let fileId, fileName;
   
-  // Extrair dados dependendo do formato da resposta
+  // Extraer datos dependiendo del formato de la respuesta
   if (response.result) {
     fileId = response.result.id;
     fileName = response.result.name;
@@ -2003,9 +2002,9 @@ async function handleSuccessfulUpload(response, photoKey) {
     fileName = response.name;
   }
   
-  console.log('Upload bem-sucedido:', { fileId, fileName });
+  console.log('Upload exitoso:', { fileId, fileName });
   
-  // Atualizar Firebase com sucesso
+  // Actualizar Firebase con éxito
   if (appState.firebaseRefs.status) {
     appState.firebaseRefs.status.update({
       photoStatus: 'completed',
@@ -2015,7 +2014,7 @@ async function handleSuccessfulUpload(response, photoKey) {
     });
   }
   
-  // Atualizar status da foto específica
+  // Actualizar status de la foto específica
   if (appState.firebaseRefs.photos && photoKey) {
     appState.firebaseRefs.photos.child(photoKey).update({
       status: 'completed',
@@ -2025,20 +2024,20 @@ async function handleSuccessfulUpload(response, photoKey) {
     });
   }
   
-  updateCameraStatus('Foto enviada com sucesso!');
+  updateCameraStatus('¡Foto enviada con éxito!');
   
-  // Esperar um pouco para mostrar o status de sucesso
+  // Esperar un poco para mostrar el status de éxito
   setTimeout(() => {
-    // Limpar input
+    // Limpiar input
     if (domElements.iphone.qrInput) {
       domElements.iphone.qrInput.value = '';
     }
     
-    updateCameraStatus('Aguardando próximo código');
+    updateCameraStatus('Esperando próximo código');
   }, 1500);
 }
 
-// Criar corpo multipart para upload
+// Crear cuerpo multipart para upload
 function createMultipartBody(metadata, base64Data) {
   const boundary = 'boundary';
   let body = `--${boundary}\r\n`;

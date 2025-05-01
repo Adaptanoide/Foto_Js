@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Scanner QR & Upload Drive</title>
+  <title>Scanner QR & Subida Drive</title>
   <link rel="stylesheet" href="style.css"> 
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
@@ -17,14 +17,14 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   
-  <!-- Configuração do Firebase -->
+  <!-- Configuración de Firebase -->
   <script src="firebase-config.js"></script>
 </head>
 <body>
-  <!-- Tela de seleção de dispositivo -->
+  <!-- Pantalla de selección de dispositivo -->
   <div id="device-selection-screen" class="screen">
     <div class="welcome-container">
-      <h1>Selecione o dispositivo</h1>
+      <h1>Seleccione el dispositivo</h1>
       
       <div class="device-buttons">
         <button id="tablet-select-btn" class="device-button tablet-button">
@@ -40,56 +40,56 @@
     </div>
   </div>
 
-  <!-- TELA PARA TABLET - GERAÇÃO DE CÓDIGO -->
+  <!-- PANTALLA PARA TABLET - GENERACIÓN DE CÓDIGO -->
   <div id="tablet-code-screen" class="screen" style="display: none;">
     <div class="code-container">
-      <h2>Código de Conexão</h2>
+      <h2>Código de Conexión</h2>
       <div class="connection-code" id="connection-code">------</div>
-      <p class="code-instructions">Digite este código no iPhone para conectar os dispositivos</p>
+      <p class="code-instructions">Ingrese este código en el iPhone para conectar los dispositivos</p>
       
       <div class="connection-status" id="tablet-connection-status">
         <div class="status-indicator waiting"></div>
-        <span>Aguardando conexão do iPhone...</span>
+        <span>Esperando conexión del iPhone...</span>
       </div>
       
-      <button id="generate-new-code-btn" class="secondary-button">Gerar Novo Código</button>
-      <button id="tablet-code-back-btn" class="back-button">Voltar</button>
+      <button id="generate-new-code-btn" class="secondary-button">Generar Nuevo Código</button>
+      <button id="tablet-code-back-btn" class="back-button">Volver</button>
     </div>
   </div>
 
-  <!-- TELA PARA IPHONE - ENTRADA DE CÓDIGO -->
+  <!-- PANTALLA PARA IPHONE - ENTRADA DE CÓDIGO -->
   <div id="iphone-code-screen" class="screen" style="display: none;">
     <div class="code-entry-container">
-      <h2>Conectar ao Tablet</h2>
-      <p class="code-instructions">Digite o código exibido no tablet</p>
+      <h2>Conectar al Tablet</h2>
+      <p class="code-instructions">Ingrese el código mostrado en el tablet</p>
       
       <div class="code-input-area">
-        <input type="number" id="connection-code-input" placeholder="Ex: 123" min="100" max="999" pattern="[0-9]{3}" inputmode="numeric">
+        <input type="number" id="connection-code-input" placeholder="Ej: 123" min="100" max="999" pattern="[0-9]{3}" inputmode="numeric">
         <button id="connect-btn" class="primary-button">Conectar</button>
       </div>
       
       <div id="code-error-message" class="error-message" style="display: none;">
-        Código inválido. Por favor, tente novamente.
+        Código inválido. Por favor, intente nuevamente.
       </div>
       
-      <button id="iphone-code-back-btn" class="back-button">Voltar</button>
+      <button id="iphone-code-back-btn" class="back-button">Volver</button>
     </div>
   </div>
 
-  <!-- Alerta de orientação -->
+  <!-- Alerta de orientación -->
   <div id="orientation-warning">
     <div class="warning-content">
       <div class="rotate-icon"></div>
-      <p>Gire seu dispositivo para o modo horizontal</p>
+      <p>Gire su dispositivo al modo horizontal</p>
     </div>
   </div>
 
   <!-- MODO TABLET - PRINCIPAL (Simplificado) -->
   <div id="tablet-screen" class="screen" style="display: none;">
-    <!-- Indicador de status do Drive no topo esquerdo -->
+    <!-- Indicador de status de Drive en la parte superior izquierda -->
     <div class="drive-status" id="drive-status">
       <div class="drive-icon" id="drive-icon"></div>
-      <span class="drive-status-text" id="drive-status-text">Aguardando</span>
+      <span class="drive-status-text" id="drive-status-text">Esperando</span>
     </div>
     
     <div class="tablet-header">
@@ -103,24 +103,24 @@
     </div>
     
     <div class="tablet-content">
-      <!-- Área de exibição do número QR - principal foco -->
+      <!-- Área de visualización del número QR - foco principal -->
       <div class="qr-display-area">
         <div class="qr-main-number" id="qr-main-number">-----</div>
         <div class="qr-secondary-info" id="qr-secondary-info">---------</div>
       </div>
       
-      <!-- Área de input mais discreta -->
+      <!-- Área de input más discreta -->
       <div class="tablet-input-area">
         <input type="text" id="tablet-qr-input" placeholder="Scanner QR" autofocus>
-        <button id="tablet-clear-btn" class="action-button">Limpar</button>
+        <button id="tablet-clear-btn" class="action-button">Limpiar</button>
       </div>
       
-      <!-- Área de status discreta (mantida para compatibilidade) -->
+      <!-- Área de status discreta (mantenida para compatibilidad) -->
       <div class="status-area">
-        <div class="status-message" id="tablet-status-message">Pronto para escanear</div>
+        <div class="status-message" id="tablet-status-message">Listo para escanear</div>
         <div class="status-indicator">
           <div class="status-light waiting"></div>
-          <span class="status-text" id="tablet-status-text">Aguardando</span>
+          <span class="status-text" id="tablet-status-text">Esperando</span>
         </div>
       </div>
     </div>
@@ -138,28 +138,28 @@
   <!-- MODO IPHONE - LOGIN -->
   <div id="login-screen" class="screen" style="display: none;">
     <div class="login-container">
-      <h1>Scanner QR & Upload Drive</h1>
-      <p class="session-display">Conectado com o código: <strong id="login-session-display"></strong></p>
-      <p>Faça login com sua conta Google para continuar</p>
+      <h1>Escáner QR & Subida Drive</h1>
+      <p class="session-display">Conectado con el código: <strong id="login-session-display"></strong></p>
+      <p>Inicie sesión con su cuenta de Google para continuar</p>
       <button id="login-btn" class="login-button" disabled>
         <span class="google-icon"></span>
-        Fazer Login com Google
+        Iniciar Sesión con Google
       </button>
       <button id="iphone-disconnect-btn" class="back-button">Desconectar</button>
     </div>
   </div>
 
-  <!-- MODO IPHONE - CÂMERA -->
+  <!-- MODO IPHONE - CÁMARA -->
   <div id="camera-screen" class="screen" style="display: none;">
-    <!-- Overlay de status para indicar uploads e sucessos -->
+    <!-- Overlay de status para indicar uploads y éxitos -->
     <div id="status-overlay" class="hidden">
       <div class="spinner"></div>
     </div>
 
-    <!-- Overlay de escaneamento QR -->
+    <!-- Overlay de escaneo QR -->
     <div id="scan-overlay">
       <div id="scan-frame" class="scan-frame"></div>
-      <div class="scan-info">Aguardando sinal do tablet...</div>
+      <div class="scan-info">Esperando señal del tablet...</div>
     </div>
 
     <main>
@@ -178,24 +178,24 @@
         <div class="action-container">
           <div class="input-wrapper">
             <input type="text" id="qr-input" placeholder="Código QR" readonly>
-            <button id="google-auth-btn" class="google-btn" title="Autenticação Google">
+            <button id="google-auth-btn" class="google-btn" title="Autenticación Google">
               <div class="user-icon"></div>
             </button>
           </div>
         </div>
       </div>
       
-      <!-- Mensagem de status simples para iPhone -->
+      <!-- Mensaje de status simple para iPhone -->
       <div class="status-message-simple" id="simple-status-message" style="display: none;">
-        Aguardando foto...
+        Esperando foto...
       </div>
       
-      <!-- Canvas oculto para processamento -->
+      <!-- Canvas oculto para procesamiento -->
       <canvas id="canvas"></canvas>
     </main>
   </div>
 
-  <!-- Script principal do aplicativo -->
+  <!-- Script principal de la aplicación -->
   <script src="app.js"></script>
 </body>
 </html>
