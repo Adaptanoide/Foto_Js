@@ -362,7 +362,7 @@ function handleConnectButtonClick() {
   connectToTablet(enteredCode);
 }
 
-// Atualizar status do indicador de Drive
+// Atualizar status do indicador de Drive - Simplificado
 function updateDriveStatus(state, message) {
   const { container, icon, text } = domElements.driveStatus;
   if (!container || !icon) return;
@@ -381,20 +381,11 @@ function updateDriveStatus(state, message) {
   // Mostrar o status em destaque
   container.classList.add('active');
   
-  // Se for sucesso, adicionar mensagem ao statusText
-  if (state === 'success' && domElements.tablet.statusText) {
-    domElements.tablet.statusText.textContent = 'Pronto para próxima foto';
-  }
-  
   // Reduzir a opacidade após alguns segundos se for sucesso
   if (state === 'success') {
     setTimeout(() => {
       container.classList.remove('active');
-      // Voltar o texto de status ao normal depois de um tempo
-      if (domElements.tablet.statusText) {
-        domElements.tablet.statusText.textContent = 'Aguardando';
-      }
-    }, 1500);
+    }, 3000);
   }
 }
 
@@ -612,31 +603,27 @@ function handlePhotoStatusChange(photoStatus) {
     case 'capturing':
       updateDriveStatus('waiting');
       break;
-      
     case 'uploading':
-      // Mostrar sucesso imediatamente quando começa o upload
+      updateDriveStatus('uploading');
+      break;
+    case 'completed':
       updateDriveStatus('success');
       
-      // Incrementar contador de fotos imediatamente
+      // Incrementar contador de fotos
       appState.photoCount++;
       if (domElements.tablet.photoCount) {
         domElements.tablet.photoCount.textContent = appState.photoCount;
       }
       
-      // Limpar a interface imediatamente para a próxima foto
-      resetTabletDisplay();
-      if (domElements.tablet.qrInput) {
-        domElements.tablet.qrInput.value = '';
-        domElements.tablet.qrInput.focus();
-      }
+      // Resetar após alguns segundos
+      setTimeout(() => {
+        resetTabletDisplay();
+        if (domElements.tablet.qrInput) {
+          domElements.tablet.qrInput.value = '';
+          domElements.tablet.qrInput.focus();
+        }
+      }, 3000);
       break;
-      
-    case 'completed':
-      // O upload já foi tratado no status 'uploading', então não fazemos nada visual aqui
-      // Apenas registramos no console para debug
-      debugLog('Upload completed successfully', null, 'info');
-      break;
-      
     case 'error':
       updateDriveStatus('error');
       break;
@@ -2065,4 +2052,3 @@ function createMultipartBody(metadata, base64Data) {
   
   return body;
 }
-
