@@ -383,6 +383,9 @@ function updateDriveStatus(state, message) {
   // Mostrar el estado destacado
   container.classList.add('active');
   
+  // NOVA LINHA: Garantir visibilidade
+  ensureDriveStatusVisibility();
+  
   // Reducir la opacidad después de algunos segundos si es éxito
   if (state === 'success') {
     setTimeout(() => {
@@ -1396,7 +1399,7 @@ function handleAuthClick() {
   }
 }
 
-// NOVA FUNÇÃO: Visualização da área de captura
+// FUNÇÃO ATUALIZADA: Visualização da área de captura
 function updateCameraViewport() {
   const { camera } = domElements.iphone;
   if (!camera || !appState.mediaStream) return;
@@ -1458,8 +1461,35 @@ function updateCameraViewport() {
     viewportGuide.appendChild(guideText);
   }
   
-  // Modificar o object-fit do vídeo para contain em vez de cover
+  // Modificar o object-fit do vídeo para conter em vez de cover
   camera.style.objectFit = 'contain';
+  
+  // NOVO: Adicionar estilos CSS para garantir que o ícone de status seja sempre visível
+  const styleId = 'drive-status-styles';
+  if (!document.getElementById(styleId)) {
+    const styleElement = document.createElement('style');
+    styleElement.id = styleId;
+    styleElement.textContent = `
+      .drive-status {
+        opacity: 1 !important;
+        z-index: 1000 !important;
+        display: flex !important;
+      }
+      .drive-icon.success::before {
+        content: '✓';
+        color: #4CAF50;
+        font-size: 24px;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+      .drive-status.active {
+        opacity: 1 !important;
+      }
+    `;
+    document.head.appendChild(styleElement);
+  }
 }
 
 // Inicializar la cámara en modo horizontal con retry y feedback
@@ -2002,7 +2032,7 @@ async function uploadWithFetch(blob, metadata) {
   return await fetchResponse.json();
 }
 
-// Procesa upload exitoso
+// Procesa upload exitoso - VERSÃO MODIFICADA
 async function handleSuccessfulUpload(response, photoKey) {
   let fileId, fileName;
   
@@ -2039,6 +2069,9 @@ async function handleSuccessfulUpload(response, photoKey) {
   
   updateCameraStatus('¡Foto enviada con éxito!');
   
+  // NOVA LINHA: Garantir que o ícone de status seja visível
+  ensureDriveStatusVisibility();
+  
   // Esperar un poco para mostrar el status de éxito
   setTimeout(() => {
     // Limpiar input
@@ -2063,4 +2096,29 @@ function createMultipartBody(metadata, base64Data) {
   body += `--${boundary}--`;
   
   return body;
+}
+
+// Adicione esta função ao final do arquivo app.js
+function ensureDriveStatusVisibility() {
+  // Garantir que o elemento de status do Drive esteja sempre visível
+  const driveStatus = document.getElementById('drive-status');
+  const driveIcon = document.getElementById('drive-icon');
+  
+  if (driveStatus && driveIcon) {
+    // Restaurar visibilidade
+    driveStatus.style.display = 'flex';
+    driveStatus.style.opacity = '1';
+    
+    // Certificar-se de que os estilos específicos sejam aplicados
+    if (driveIcon.classList.contains('success')) {
+      driveStatus.classList.add('active');
+      
+      // Garantir que o ícone de sucesso fique visível por pelo menos 3 segundos
+      setTimeout(() => {
+        if (driveIcon.classList.contains('success')) {
+          driveStatus.classList.remove('active');
+        }
+      }, 3000);
+    }
+  }
 }
