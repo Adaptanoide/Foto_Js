@@ -364,7 +364,7 @@ function handleConnectButtonClick() {
   connectToTablet(enteredCode);
 }
 
-// Modificação simplificada da função updateDriveStatus
+// Actualizar estado del indicador de Drive - Simplificado
 function updateDriveStatus(state, message) {
   const { container, icon, text } = domElements.driveStatus;
   if (!container || !icon) return;
@@ -380,25 +380,14 @@ function updateDriveStatus(state, message) {
   // Eliminar completamente el texto (siempre)
   if (text) text.textContent = '';
   
-  // Aplicar estilos inline diretamente para garantir visibilidade
-  container.style.display = 'flex';
-  container.style.opacity = '1';
-  container.style.zIndex = '1000';
-  container.style.position = 'fixed';
+  // Mostrar el estado destacado
+  container.classList.add('active');
   
-  // Se o estado for 'success', aplicar estilos adicionais
+  // Reducir la opacidad después de algunos segundos si es éxito
   if (state === 'success') {
-    icon.style.backgroundColor = 'white';
-    // Cor verde mais forte e brilhante
-    icon.style.color = '#00c853';
-    
-    // Mostrar o estado destacado
-    container.classList.add('active');
-    
-    // Aumentar o tempo de exibição para 5 segundos
     setTimeout(() => {
       container.classList.remove('active');
-    }, 5000);
+    }, 3000);
   }
 }
 
@@ -986,7 +975,6 @@ function setupFirebaseForIphone() {
       .on('child_added', handleNewPhotoRequest, handlePhotoRequestError);
     
     debugLog('Firebase configurado para modo iPhone con código:', appState.connectionCode);
-    setupSuccessIndicator();
   } catch (error) {
     console.error('Error al configurar escucha de solicitudes de foto:', error);
     updateCameraStatus('Error al configurar conexión con el tablet', 'error');
@@ -1109,60 +1097,6 @@ function disconnectFromFirebase() {
   debugLog('Desconectado de Firebase');
 }
 
-function setupSuccessIndicator() {
-  // Verificar se já existe um listener para evitar duplicatas
-  if (window._photoStatusListener) return;
-  
-  // Função que será chamada quando o status mudar
-  function handleStatusChange(snapshot) {
-    const status = snapshot.val();
-    if (status && status.photoStatus === 'completed') {
-      // Criar ou atualizar o indicador de sucesso
-      let indicator = document.getElementById('photo-success-indicator');
-      
-      if (!indicator) {
-        indicator = document.createElement('div');
-        indicator.id = 'photo-success-indicator';
-        document.body.appendChild(indicator);
-        
-        // Estilos inline para evitar conflitos com CSS existente
-        indicator.style.position = 'fixed';
-        indicator.style.top = '20px';
-        indicator.style.right = '20px';
-        indicator.style.width = '40px';
-        indicator.style.height = '40px';
-        indicator.style.borderRadius = '50%';
-        indicator.style.backgroundColor = '#4CAF50';
-        indicator.style.color = 'white';
-        indicator.style.display = 'flex';
-        indicator.style.alignItems = 'center';
-        indicator.style.justifyContent = 'center';
-        indicator.style.fontSize = '24px';
-        indicator.style.fontWeight = 'bold';
-        indicator.style.boxShadow = '0 3px 8px rgba(0,0,0,0.3)';
-        indicator.style.zIndex = '9999';
-        indicator.innerHTML = '✓';
-      }
-      
-      // Garantir que esteja visível
-      indicator.style.display = 'flex';
-      
-      // Remover após 8 segundos
-      setTimeout(() => {
-        if (indicator && indicator.parentNode) {
-          indicator.style.display = 'none';
-        }
-      }, 8000);
-    }
-  }
-  
-  // Adicionar o listener ao Firebase se estivermos conectados
-  if (appState.isConnectedToFirebase && appState.firebaseRefs.status) {
-    window._photoStatusListener = true;
-    appState.firebaseRefs.status.on('value', handleStatusChange);
-  }
-}
-
 // Configurar modo tablet - con detección de Enter mejorada
 function setupTabletMode() {
   // Agregar listener para tecla Enter (muchos scanners QR envían Enter después de la lectura)
@@ -1199,7 +1133,6 @@ function showStatusOverlay(state) {
       updateCameraStatus('Enviando foto...');
     } else if (state === 'success') {
       updateCameraStatus('¡Foto enviada con éxito!');
-      showSuccessIcon();
     } else if (state === 'error') {
       updateCameraStatus('Error al enviar foto', 'error');
     } else {
@@ -2130,46 +2063,4 @@ function createMultipartBody(metadata, base64Data) {
   body += `--${boundary}--`;
   
   return body;
-}
-
-function showSuccessIcon() {
-  // Remover qualquer ícone existente primeiro
-  const oldIcon = document.getElementById('custom-success-icon');
-  if (oldIcon) oldIcon.remove();
-  
-  // Criar um novo elemento independente
-  const successIcon = document.createElement('div');
-  successIcon.id = 'custom-success-icon';
-  
-  // Estilizar o elemento para ser bem visível
-  Object.assign(successIcon.style, {
-    position: 'fixed',
-    top: '20px',
-    right: '20px',
-    zIndex: '9999',
-    backgroundColor: '#4CAF50',
-    color: 'white',
-    width: '50px',
-    height: '50px',
-    borderRadius: '50%',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    fontSize: '24px',
-    fontWeight: 'bold',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.3)'
-  });
-  
-  // Adicionar um símbolo de check
-  successIcon.innerHTML = '✓';
-  
-  // Adicionar ao body
-  document.body.appendChild(successIcon);
-  
-  // Remover após 10 segundos
-  setTimeout(() => {
-    if (successIcon.parentNode) {
-      successIcon.parentNode.removeChild(successIcon);
-    }
-  }, 10000);
 }
