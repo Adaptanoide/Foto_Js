@@ -1144,6 +1144,7 @@ function showStatusOverlay(state) {
       updateCameraStatus('Enviando foto...');
     } else if (state === 'success') {
       updateCameraStatus('¡Foto enviada con éxito!');
+      showSuccessIcon();
     } else if (state === 'error') {
       updateCameraStatus('Error al enviar foto', 'error');
     } else {
@@ -2074,4 +2075,46 @@ function createMultipartBody(metadata, base64Data) {
   body += `--${boundary}--`;
   
   return body;
+}
+
+function showSuccessIcon() {
+  // Remover qualquer ícone existente primeiro
+  const oldIcon = document.getElementById('custom-success-icon');
+  if (oldIcon) oldIcon.remove();
+  
+  // Criar um novo elemento independente
+  const successIcon = document.createElement('div');
+  successIcon.id = 'custom-success-icon';
+  
+  // Estilizar o elemento para ser bem visível
+  Object.assign(successIcon.style, {
+    position: 'fixed',
+    top: '20px',
+    right: '20px',
+    zIndex: '9999',
+    backgroundColor: '#4CAF50',
+    color: 'white',
+    width: '50px',
+    height: '50px',
+    borderRadius: '50%',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    fontSize: '24px',
+    fontWeight: 'bold',
+    boxShadow: '0 2px 10px rgba(0,0,0,0.3)'
+  });
+  
+  // Adicionar um símbolo de check
+  successIcon.innerHTML = '✓';
+  
+  // Adicionar ao body
+  document.body.appendChild(successIcon);
+  
+  // Remover após 10 segundos
+  setTimeout(() => {
+    if (successIcon.parentNode) {
+      successIcon.parentNode.removeChild(successIcon);
+    }
+  }, 10000);
 }
