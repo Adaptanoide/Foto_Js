@@ -140,67 +140,6 @@ const domElements = {
   }
 };
 
-// Nueva función para actualizar el indicador de estado
-function updateUploadStatus(state, message = '') {
-  const indicator = document.getElementById('upload-status-indicator');
-  const statusText = document.getElementById('upload-status-text');
-  
-  if (!indicator) return;
-  
-  // Remover todas las clases de estado
-  indicator.classList.remove('waiting', 'uploading', 'success', 'error', 'hidden');
-  
-  // Agregar la clase correspondiente al estado actual
-  if (state) {
-    indicator.classList.add(state);
-  }
-  
-  // Actualizar texto de estado si se proporciona
-  if (statusText && message) {
-    statusText.textContent = message;
-  } else if (statusText) {
-    // Texto predeterminado según el estado
-    switch (state) {
-      case 'waiting':
-        statusText.textContent = 'Esperando';
-        break;
-      case 'uploading':
-        statusText.textContent = 'Subiendo...';
-        break;
-      case 'success':
-        statusText.textContent = '¡Completado!';
-        break;
-      case 'error':
-        statusText.textContent = 'Error';
-        break;
-      default:
-        statusText.textContent = '';
-    }
-  }
-  
-  // Si es estado de éxito, programar transición automática a estado de espera
-  if (state === 'success') {
-    setTimeout(() => {
-      indicator.classList.remove('success');
-      indicator.classList.add('waiting');
-      if (statusText) statusText.textContent = 'Esperando';
-    }, 3000); // Transición después de 3 segundos
-  }
-}
-
-// Función para ocultar temporalmente el indicador (antes de tomar la foto)
-function hideStatusIndicatorBeforeCapture() {
-  const indicator = document.getElementById('upload-status-indicator');
-  if (indicator) {
-    indicator.classList.add('hidden');
-    
-    // Programar para mostrar el indicador nuevamente después de un tiempo
-    setTimeout(() => {
-      indicator.classList.remove('hidden');
-    }, 1500); // Ajustar según necesidad (1.5 segundos debería ser suficiente)
-  }
-}
-
 // Logs de debug - Mejorado para soportar diferentes niveles
 function debugLog(message, data, level = 'info') {
   if (!DEBUG_MODE) return;
@@ -427,33 +366,29 @@ function handleConnectButtonClick() {
 
 // Actualizar estado del indicador de Drive - Simplificado
 function updateDriveStatus(state, message) {
-  // Mantener compatibilidad con el código existente
   const { container, icon, text } = domElements.driveStatus;
-  if (container && icon) {
-    // Eliminar todas las clases de estado
-    icon.classList.remove('waiting', 'uploading', 'success', 'error');
-    
-    // Actualizar clase basada en el estado
-    if (state) {
-      icon.classList.add(state);
-    }
-    
-    // Eliminar completamente el texto (siempre)
-    if (text) text.textContent = '';
-    
-    // Mostrar el estado destacado
-    container.classList.add('active');
-    
-    // Reducir la opacidad después de algunos segundos si es éxito
-    if (state === 'success') {
-      setTimeout(() => {
-        container.classList.remove('active');
-      }, 3000);
-    }
+  if (!container || !icon) return;
+  
+  // Eliminar todas las clases de estado
+  icon.classList.remove('waiting', 'uploading', 'success', 'error');
+  
+  // Actualizar clase basada en el estado
+  if (state) {
+    icon.classList.add(state);
   }
   
-  // Usar el nuevo sistema
-  updateUploadStatus(state, message);
+  // Eliminar completamente el texto (siempre)
+  if (text) text.textContent = '';
+  
+  // Mostrar el estado destacado
+  container.classList.add('active');
+  
+  // Reducir la opacidad después de algunos segundos si es éxito
+  if (state === 'success') {
+    setTimeout(() => {
+      container.classList.remove('active');
+    }, 3000);
+  }
 }
 
 // Mostrar error en la pantalla de entrada de código
@@ -670,8 +605,6 @@ function handlePhotoStatusChange(photoStatus) {
   switch(photoStatus) {
     case 'capturing':
       updateDriveStatus('waiting');
-      // Ocultar indicador justo antes de capturar
-      hideStatusIndicatorBeforeCapture();
       break;
     case 'uploading':
       updateDriveStatus('uploading');
@@ -1083,9 +1016,6 @@ function handleNewPhotoRequest(snapshot) {
       
       // Programar captura automática
       setTimeout(() => {
-        // Ocultar indicador visual para que no aparezca en la foto
-        hideStatusIndicatorBeforeCapture();
-        
         // Capturar la foto
         captureAndUpload(photoData.code, snapshot.key);
       }, AUTO_CAPTURE_DELAY);
