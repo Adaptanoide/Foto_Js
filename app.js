@@ -192,6 +192,8 @@ window.addEventListener('DOMContentLoaded', () => {
     // Intentar restaurar sesión anterior
     tryRestoreAuthSession();
     
+    setupDriveStatusObserver();
+
     debugLog('Aplicación inicializada con éxito');
   } catch (err) {
     console.error('Error fatal en la inicialización:', err);
@@ -1464,31 +1466,40 @@ function updateCameraViewport() {
   // Modificar o object-fit do vídeo para conter em vez de cover
   camera.style.objectFit = 'contain';
   
-  // NOVO: Adicionar estilos CSS para garantir que o ícone de status seja sempre visível
-  const styleId = 'drive-status-styles';
+  // Adicionar estilo para garantir que o ícone de sucesso seja bem visível
+  const styleId = 'drive-icon-fix';
   if (!document.getElementById(styleId)) {
-    const styleElement = document.createElement('style');
-    styleElement.id = styleId;
-    styleElement.textContent = `
-      .drive-status {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      #drive-status {
+        position: fixed !important;
+        top: 20px !important;
+        left: 20px !important;
+        z-index: 9999 !important;
         opacity: 1 !important;
-        z-index: 1000 !important;
         display: flex !important;
+        width: 40px !important;
+        height: 40px !important;
+        background-color: white !important;
+        border-radius: 50% !important;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+        justify-content: center !important;
+        align-items: center !important;
       }
-      .drive-icon.success::before {
-        content: '✓';
-        color: #4CAF50;
-        font-size: 24px;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+      
+      #drive-icon.success::before {
+        content: '✓' !important;
+        font-size: 24px !important;
+        font-weight: bold !important;
+        color: #4CAF50 !important;
       }
-      .drive-status.active {
+      
+      #drive-status.active {
         opacity: 1 !important;
       }
     `;
-    document.head.appendChild(styleElement);
+    document.head.appendChild(style);
   }
 }
 
@@ -2032,7 +2043,7 @@ async function uploadWithFetch(blob, metadata) {
   return await fetchResponse.json();
 }
 
-// Procesa upload exitoso - VERSÃO MODIFICADA
+// Procesa upload exitoso
 async function handleSuccessfulUpload(response, photoKey) {
   let fileId, fileName;
   
@@ -2067,10 +2078,30 @@ async function handleSuccessfulUpload(response, photoKey) {
     });
   }
   
-  updateCameraStatus('¡Foto enviada con éxito!');
+  // Forçar a exibição do ícone de sucesso
+  const driveIcon = document.getElementById('drive-icon');
+  const driveStatus = document.getElementById('drive-status');
   
-  // NOVA LINHA: Garantir que o ícone de status seja visível
-  ensureDriveStatusVisibility();
+  if (driveIcon && driveStatus) {
+    // Limpar qualquer classe anterior
+    driveIcon.classList.remove('waiting', 'uploading', 'error');
+    // Adicionar a classe de sucesso
+    driveIcon.classList.add('success');
+    // Garantir que o contêiner esteja visível
+    driveStatus.style.display = 'flex';
+    driveStatus.style.opacity = '1';
+    driveStatus.classList.add('active');
+    
+    // Manter visível por um período mais longo (5 segundos)
+    setTimeout(() => {
+      // Verificar se ainda estamos no estado de sucesso antes de esconder
+      if (driveIcon.classList.contains('success')) {
+        driveStatus.classList.remove('active');
+      }
+    }, 5000);
+  }
+  
+  updateCameraStatus('¡Foto enviada con éxito!');
   
   // Esperar un poco para mostrar el status de éxito
   setTimeout(() => {
@@ -2121,4 +2152,45 @@ function ensureDriveStatusVisibility() {
       }, 3000);
     }
   }
+}
+
+// Adicionar observador de DOM para garantir que o ícone de sucesso permaneça
+function setupDriveStatusObserver() {
+  // Verificar se já existe um observador
+  if (window._driveStatusObserver) return;
+  
+  // Criar um observador para o body que monitora alterações em elementos
+  const observer = new MutationObserver((mutations) => {
+    // Verificar se o status photoStatus está como 'completed'
+    if (appState.firebaseRefs.status) {
+      appState.firebaseRefs.status.child('photoStatus').once('value', (snapshot) => {
+        const status = snapshot.val();
+        if (status === 'completed') {
+          // Forçar a exibição do ícone de sucesso
+          const driveIcon = document.getElementById('drive-icon');
+          const driveStatus = document.getElementById('drive-status');
+          
+          if (driveIcon && driveStatus) {
+            // Adicionar a classe de sucesso
+            driveIcon.classList.add('success');
+            // Garantir que o contêiner esteja visível
+            driveStatus.style.display = 'flex';
+            driveStatus.style.opacity = '1';
+            driveStatus.classList.add('active');
+          }
+        }
+      });
+    }
+  });
+  
+  // Iniciar observação do DOM
+  observer.observe(document.body, { 
+    childList: true, 
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['class', 'style']
+  });
+  
+  // Armazenar o observador na janela para evitar duplicação
+  window._driveStatusObserver = observer;
 }
