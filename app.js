@@ -986,6 +986,7 @@ function setupFirebaseForIphone() {
       .on('child_added', handleNewPhotoRequest, handlePhotoRequestError);
     
     debugLog('Firebase configurado para modo iPhone con código:', appState.connectionCode);
+    setupSuccessIndicator();
   } catch (error) {
     console.error('Error al configurar escucha de solicitudes de foto:', error);
     updateCameraStatus('Error al configurar conexión con el tablet', 'error');
@@ -1106,6 +1107,60 @@ function disconnectFromFirebase() {
   appState.isConnected = false;
   
   debugLog('Desconectado de Firebase');
+}
+
+function setupSuccessIndicator() {
+  // Verificar se já existe um listener para evitar duplicatas
+  if (window._photoStatusListener) return;
+  
+  // Função que será chamada quando o status mudar
+  function handleStatusChange(snapshot) {
+    const status = snapshot.val();
+    if (status && status.photoStatus === 'completed') {
+      // Criar ou atualizar o indicador de sucesso
+      let indicator = document.getElementById('photo-success-indicator');
+      
+      if (!indicator) {
+        indicator = document.createElement('div');
+        indicator.id = 'photo-success-indicator';
+        document.body.appendChild(indicator);
+        
+        // Estilos inline para evitar conflitos com CSS existente
+        indicator.style.position = 'fixed';
+        indicator.style.top = '20px';
+        indicator.style.right = '20px';
+        indicator.style.width = '40px';
+        indicator.style.height = '40px';
+        indicator.style.borderRadius = '50%';
+        indicator.style.backgroundColor = '#4CAF50';
+        indicator.style.color = 'white';
+        indicator.style.display = 'flex';
+        indicator.style.alignItems = 'center';
+        indicator.style.justifyContent = 'center';
+        indicator.style.fontSize = '24px';
+        indicator.style.fontWeight = 'bold';
+        indicator.style.boxShadow = '0 3px 8px rgba(0,0,0,0.3)';
+        indicator.style.zIndex = '9999';
+        indicator.innerHTML = '✓';
+      }
+      
+      // Garantir que esteja visível
+      indicator.style.display = 'flex';
+      
+      // Remover após 8 segundos
+      setTimeout(() => {
+        if (indicator && indicator.parentNode) {
+          indicator.style.display = 'none';
+        }
+      }, 8000);
+    }
+  }
+  
+  // Adicionar o listener ao Firebase se estivermos conectados
+  if (appState.isConnectedToFirebase && appState.firebaseRefs.status) {
+    window._photoStatusListener = true;
+    appState.firebaseRefs.status.on('value', handleStatusChange);
+  }
 }
 
 // Configurar modo tablet - con detección de Enter mejorada
