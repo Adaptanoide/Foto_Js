@@ -364,7 +364,7 @@ function handleConnectButtonClick() {
   connectToTablet(enteredCode);
 }
 
-// Actualizar estado del indicador de Drive - Simplificado
+// Modificação simplificada da função updateDriveStatus
 function updateDriveStatus(state, message) {
   const { container, icon, text } = domElements.driveStatus;
   if (!container || !icon) return;
@@ -380,14 +380,25 @@ function updateDriveStatus(state, message) {
   // Eliminar completamente el texto (siempre)
   if (text) text.textContent = '';
   
-  // Mostrar el estado destacado
-  container.classList.add('active');
+  // Aplicar estilos inline diretamente para garantir visibilidade
+  container.style.display = 'flex';
+  container.style.opacity = '1';
+  container.style.zIndex = '1000';
+  container.style.position = 'fixed';
   
-  // Reducir la opacidad después de algunos segundos si es éxito
+  // Se o estado for 'success', aplicar estilos adicionais
   if (state === 'success') {
+    icon.style.backgroundColor = 'white';
+    // Cor verde mais forte e brilhante
+    icon.style.color = '#00c853';
+    
+    // Mostrar o estado destacado
+    container.classList.add('active');
+    
+    // Aumentar o tempo de exibição para 5 segundos
     setTimeout(() => {
       container.classList.remove('active');
-    }, 3000);
+    }, 5000);
   }
 }
 
