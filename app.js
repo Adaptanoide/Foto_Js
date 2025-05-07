@@ -1,4 +1,4 @@
-// === CONFIG Google API ===
+// === CONFIG Google API === (near the top of your file)
 const CLIENT_ID = '209622447692-eev27ais29mr9rn8o1jfjh9tc5budni4.apps.googleusercontent.com';
 const FOLDER_ID = '1PoWXuFHe0-AXKLTbQlWu0NmEG3aC-ZxP';
 const API_KEY = ''; // Agregue su API_KEY si es necesario
@@ -11,11 +11,11 @@ const TARGET_WIDTH = 4032;
 const TARGET_HEIGHT = 3024;
 const TARGET_RATIO = TARGET_WIDTH / TARGET_HEIGHT;
 
-// Configuraciones de captura y QR
+// Configuraciones de captura y QR - MODIFICAR ESTOS VALORES
 const QR_SCAN_INTERVAL = 200;
-const QR_CONFIRMATION_DELAY = 2000;
+const QR_CONFIRMATION_DELAY = 1000;  // Reducido de 2000 a 1000
 const PROCESSING_SIZE = 800;
-const AUTO_CAPTURE_DELAY = 4000;
+const AUTO_CAPTURE_DELAY = 2000;  // Reducido de 4000 a 2000
 
 // Estado de la aplicación - centralizado para mayor control
 const appState = {
