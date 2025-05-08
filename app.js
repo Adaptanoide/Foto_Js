@@ -17,6 +17,16 @@ const QR_CONFIRMATION_DELAY = 1000;  // Reducido de 2000 a 1000
 const PROCESSING_SIZE = 800;
 const AUTO_CAPTURE_DELAY = 2000;  // Reducido de 4000 a 2000
 
+Object.defineProperty(appState, 'photoCount', {
+  get: function() {
+    return this._photoCount || 0;
+  },
+  set: function(newValue) {
+    console.log('Photo count changed:', this._photoCount, '->', newValue, new Error().stack);
+    this._photoCount = newValue;
+  }
+});
+
 // Estado de la aplicación - centralizado para mayor control
 const appState = {
   currentMode: null,
@@ -615,17 +625,18 @@ function setupPhotoStatusListener() {
   });
 }
 
-// Handler para cambio en el status de la foto - Corregido para evitar doble conteo
+// Handler para cambio en el status de la foto - Version corregida
 function handlePhotoStatusChange(photoStatus) {
+  // Add logging to debug the issue
+  console.log("Photo status changed to:", photoStatus);
+  
   switch(photoStatus) {
     case 'capturing':
-      updateDriveStatus('waiting');
+      // Just update status, don't touch counter
       break;
     case 'captured': 
-      // INMEDIATAMENTE mostrar éxito - este es el cambio crítico
-      updateDriveStatus('success');
-      
-      // Incrementar contador de fotos SÓLO AQUÍ - no en 'completed'
+      // Increment counter ONLY in this state
+      console.log("Incrementing photo count on 'captured' state");
       appState.photoCount++;
       if (domElements.tablet.photoCount) {
         domElements.tablet.photoCount.textContent = appState.photoCount;
@@ -639,24 +650,22 @@ function handlePhotoStatusChange(photoStatus) {
       }
       break;
     case 'queued':
-      // Foto en cola - ya hemos mostrado éxito, ahora solo background
-      updateDriveStatus('background-uploading');
+      // Just reset display, don't touch counter
+      resetTabletDisplay();
+      if (domElements.tablet.qrInput) {
+        domElements.tablet.qrInput.value = '';
+        domElements.tablet.qrInput.focus();
+      }
       break;
     case 'uploading':
-      updateDriveStatus('background-uploading');
+      // No counter changes here
       break;
     case 'completed':
-      // Mostrar un éxito breve de nuevo al completar, pero NO incrementar contador
-      updateDriveStatus('success');
-      setTimeout(() => {
-        // Revertir a estado de espera
-        if (!appState.isProcessingQR) {
-          updateDriveStatus('waiting');
-        }
-      }, 1000); // Breve flash verde
+      // DO NOT increment counter here
+      console.log("Not incrementing in 'completed' state");
       break;
     case 'error':
-      updateDriveStatus('error');
+      // No counter changes here
       break;
   }
 }
@@ -2273,6 +2282,9 @@ async function handleSuccessfulUpload(response, photoKey) {
     });
   }
   
+  // IMPORTANT: DO NOT increment photo count here!
+  // ❌ Remove or comment out any code that increments appState.photoCount
+  
   updateCameraStatus('¡Foto enviada con éxito!');
   
   // Esperar un poco para mostrar el status de éxito
@@ -2299,4 +2311,26 @@ function createMultipartBody(metadata, base64Data) {
   body += `--${boundary}--`;
   
   return body;
+}
+
+// Add this function to reset the photo counter when needed
+function resetPhotoCounter() {
+  appState.photoCount = 0;
+  if (domElements.tablet.photoCount) {
+    domElements.tablet.photoCount.textContent = '0';
+  }
+}
+
+// Call this function when disconnecting from Firebase or starting a new session
+function disconnectFromFirebase() {
+  // Existing code...
+  
+  appState.isConnectedToFirebase = false;
+  appState.connectionCode = null;
+  appState.isConnected = false;
+  
+  // Reset counter when disconnecting
+  resetPhotoCounter();
+  
+  debugLog('Desconectado de Firebase');
 }

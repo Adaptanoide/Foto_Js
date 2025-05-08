@@ -1382,3 +1382,8 @@ body.portrait-warning #orientation-warning {
 .uploading-indicator:hover + .queue-info-tooltip {
   display: block;
 }
+
+/* Add this to your CSS to hide the drive status circle completely */
+.drive-status {
+  display: none !important; /* Force hiding regardless of other styles */
+}
