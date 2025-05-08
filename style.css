@@ -652,6 +652,15 @@ body.portrait-warning #orientation-warning {
   border-right: 4px solid #4CAF50;
   border-bottom: 4px solid #4CAF50;
   transform: rotate(45deg) translate(-4px, -4px);
+  /* Make it stand out more */
+  filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.8));
+}
+
+.drive-status.active .drive-icon.success {
+  opacity: 1 !important;
+  transform: scale(1.2);
+  background-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.6);
 }
 
 .drive-icon.waiting {

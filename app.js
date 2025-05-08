@@ -370,7 +370,7 @@ function handleConnectButtonClick() {
   connectToTablet(enteredCode);
 }
 
-// Actualizar estado del indicador de Drive - Versión modificada para indicar continuación
+// Actualizar estado del indicador de Drive - Versión modificada
 function updateDriveStatus(state, message) {
   const { container, icon, text } = domElements.driveStatus;
   if (!container || !icon) return;
@@ -394,11 +394,16 @@ function updateDriveStatus(state, message) {
   // Mostrar el estado destacado
   container.classList.add('active');
   
-  // Reducir la opacidad después de algunos segundos si es éxito
+  // Tiempo más largo para éxito (5 segundos en lugar de 3)
   if (state === 'success') {
-    setTimeout(() => {
+    // Clear any existing timeout to prevent premature hiding
+    if (window.successStatusTimeout) {
+      clearTimeout(window.successStatusTimeout);
+    }
+    
+    window.successStatusTimeout = setTimeout(() => {
       container.classList.remove('active');
-    }, 3000);
+    }, 5000); // Increased from 3000 to 5000
   }
 }
 
@@ -610,7 +615,7 @@ function setupPhotoStatusListener() {
   });
 }
 
-// Handler para cambio en el status de la foto
+// Handler para cambio en el status de la foto - Corregido para evitar doble conteo
 function handlePhotoStatusChange(photoStatus) {
   switch(photoStatus) {
     case 'capturing':
@@ -620,7 +625,7 @@ function handlePhotoStatusChange(photoStatus) {
       // INMEDIATAMENTE mostrar éxito - este es el cambio crítico
       updateDriveStatus('success');
       
-      // Incrementar contador de fotos aquí - no esperar a que se complete la subida
+      // Incrementar contador de fotos SÓLO AQUÍ - no en 'completed'
       appState.photoCount++;
       if (domElements.tablet.photoCount) {
         domElements.tablet.photoCount.textContent = appState.photoCount;
@@ -641,7 +646,7 @@ function handlePhotoStatusChange(photoStatus) {
       updateDriveStatus('background-uploading');
       break;
     case 'completed':
-      // Mostrar un éxito breve de nuevo al completar
+      // Mostrar un éxito breve de nuevo al completar, pero NO incrementar contador
       updateDriveStatus('success');
       setTimeout(() => {
         // Revertir a estado de espera
@@ -1897,11 +1902,24 @@ async function captureAndUpload(codeNumber, photoKey) {
   }
 }
 
-// Función para notificar al tablet que puede continuar
+// Función para notificar al tablet que puede continuar - con mejora visual
 function notifyTabletCaptureComplete(codeNumber) {
   // Verificar conexión
   if (!appState.isConnectedToFirebase || !appState.firebaseRefs.status) {
     return;
+  }
+  
+  // Hacer que el indicador de Drive sea más visible
+  const { container } = domElements.driveStatus;
+  if (container) {
+    container.style.transform = 'scale(1.3)';
+    container.style.opacity = '1';
+    
+    // Restaurar después de un tiempo
+    setTimeout(() => {
+      container.style.transform = '';
+      container.style.opacity = '';
+    }, 2000);
   }
   
   // Actualizar último código y permitir continuar
