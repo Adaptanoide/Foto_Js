@@ -1331,3 +1331,37 @@ body.portrait-warning #orientation-warning {
   width: 0%;
   transition: width 0.3s ease;
 }
+
+/* Nuevo estilo para indicar subida en segundo plano */
+.drive-icon.background-uploading::before {
+  content: '';
+  box-sizing: border-box;
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  /* Usar un color más sutil que indique "continuar" */
+  border: 3px solid rgba(33, 150, 243, 0.3);
+  border-top-color: #4CAF50;
+  animation: spinner 2s linear infinite;
+}
+
+/* Mensaje de información sobre la cola */
+.queue-info-tooltip {
+  position: fixed;
+  bottom: 120px;
+  right: 20px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-size: 14px;
+  z-index: 1001;
+  max-width: 250px;
+  text-align: center;
+  display: none;
+}
+
+.queue-badge:hover + .queue-info-tooltip {
+  display: block;
+}
