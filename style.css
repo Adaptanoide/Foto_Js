@@ -1292,24 +1292,32 @@ body.portrait-warning #orientation-warning {
   }
 }
 
-/* Badge de cola de fotos */
-.queue-badge {
+/* Replace the queue-badge with a simple uploading indicator */
+.uploading-indicator {
   position: fixed;
   bottom: 70px;
   right: 20px;
   width: 40px;
   height: 40px;
-  background-color: rgba(244, 67, 54, 0.9);
-  color: white;
+  background-color: rgba(33, 150, 243, 0.7);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 18px;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
   z-index: 1000;
-  animation: pulse 1.5s infinite;
+}
+
+.uploading-indicator::before {
+  content: '';
+  box-sizing: border-box;
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  animation: spin 1s linear infinite;
 }
 
 /* Indicador de progreso de cola */
@@ -1362,6 +1370,6 @@ body.portrait-warning #orientation-warning {
   display: none;
 }
 
-.queue-badge:hover + .queue-info-tooltip {
+.uploading-indicator:hover + .queue-info-tooltip {
   display: block;
 }

@@ -617,8 +617,14 @@ function handlePhotoStatusChange(photoStatus) {
       updateDriveStatus('waiting');
       break;
     case 'captured': 
-      // Nuevo estado - foto capturada pero en cola, liberar tablet
+      // INMEDIATAMENTE mostrar éxito - este es el cambio crítico
       updateDriveStatus('success');
+      
+      // Incrementar contador de fotos aquí - no esperar a que se complete la subida
+      appState.photoCount++;
+      if (domElements.tablet.photoCount) {
+        domElements.tablet.photoCount.textContent = appState.photoCount;
+      }
       
       // Resetear inmediatamente
       resetTabletDisplay();
@@ -628,27 +634,21 @@ function handlePhotoStatusChange(photoStatus) {
       }
       break;
     case 'queued':
-      // Foto en cola - ya podemos liberar el tablet
+      // Foto en cola - ya hemos mostrado éxito, ahora solo background
       updateDriveStatus('background-uploading');
-      
-      // Resetear la pantalla del tablet
-      resetTabletDisplay();
-      if (domElements.tablet.qrInput) {
-        domElements.tablet.qrInput.value = '';
-        domElements.tablet.qrInput.focus();
-      }
       break;
     case 'uploading':
       updateDriveStatus('background-uploading');
       break;
     case 'completed':
+      // Mostrar un éxito breve de nuevo al completar
       updateDriveStatus('success');
-      
-      // Incrementar contador de fotos
-      appState.photoCount++;
-      if (domElements.tablet.photoCount) {
-        domElements.tablet.photoCount.textContent = appState.photoCount;
-      }
+      setTimeout(() => {
+        // Revertir a estado de espera
+        if (!appState.isProcessingQR) {
+          updateDriveStatus('waiting');
+        }
+      }, 1000); // Breve flash verde
       break;
     case 'error':
       updateDriveStatus('error');
@@ -1809,13 +1809,36 @@ async function captureAndUpload(codeNumber, photoKey) {
     // Capturar imagen en alta calidad
     const imageBlob = await captureHighQualityImage(domElements.iphone.camera);
     
+    // IMPORTANTE: Mostrar éxito inmediatamente después de capturar
+    updateCameraStatus('¡Foto capturada con éxito!');
+    
     // Notificar al tablet que puede continuar inmediatamente
-    // IMPORTANTE: Esto es clave para liberar el tablet para escanear más códigos
+    // Y mostrar el check verde en el tablet
     if (appState.firebaseRefs.status) {
       appState.firebaseRefs.status.update({
         photoStatus: 'captured', // Nuevo estado que indica que la foto fue tomada
-        captureCompleteTime: firebase.database.ServerValue.TIMESTAMP
+        captureCompleteTime: firebase.database.ServerValue.TIMESTAMP,
+        canContinue: true, // Flag explícito para indicar que puede continuar
+        showSuccess: true // Flag para mostrar éxito inmediatamente
       });
+    }
+    
+    // IMPORTANTE: Notificar tablet que foto está en cola, pero puede continuar
+    // Esto resetea la pantalla del tablet inmediatamente
+    notifyTabletCaptureComplete(codeNumber);
+    
+    // Permitir escaneo inmediato del siguiente código QR
+    // El tablet puede continuar escaneando mientras las subidas ocurren en segundo plano
+    if (domElements.iphone.scanOverlay) {
+      setTimeout(() => {
+        domElements.iphone.scanOverlay.classList.remove('detected');
+        domElements.iphone.scanOverlay.classList.add('hidden');
+      }, 300); // Reducido para acelerar UX
+    }
+    
+    // Limpiar el input QR
+    if (domElements.iphone.qrInput) {
+      domElements.iphone.qrInput.value = '';
     }
     
     // Añadir a la cola
@@ -1830,44 +1853,25 @@ async function captureAndUpload(codeNumber, photoKey) {
     
     appState.photoQueue.push(queueItem);
     
-    // Mostrar mensaje de cola
-    const queuePosition = appState.photoQueue.length;
-    updateCameraStatus(`Foto en cola (${queuePosition})`);
-    
-    // Actualizar status Firebase para cola
+    // Actualizar status Firebase para cola - DESPUÉS de notificar éxito
     if (appState.firebaseRefs.photos && photoKey) {
       appState.firebaseRefs.photos.child(photoKey).update({
         status: 'queued',
-        queuePosition: queuePosition,
+        queuePosition: appState.photoQueue.length,
         queueTime: firebase.database.ServerValue.TIMESTAMP
       });
     }
     
-    // Iniciar procesamiento de cola si no está activo
-    if (!appState.isProcessingQueue) {
-      processPhotoQueue();
-    }
-    
-    // Permitir escaneo inmediato del siguiente código QR
-    // El tablet puede continuar escaneando mientras las subidas ocurren en segundo plano
-    if (domElements.iphone.scanOverlay) {
-      setTimeout(() => {
-        domElements.iphone.scanOverlay.classList.remove('detected');
-        domElements.iphone.scanOverlay.classList.add('hidden');
-      }, 500);
-    }
-    
-    // Limpiar el input QR
-    if (domElements.iphone.qrInput) {
-      domElements.iphone.qrInput.value = '';
-    }
-    
-    // Actualizar badge de cola
+    // Actualizar indicador de cola
     updateQueueStatusBadge();
     
-    // IMPORTANTE: Notificar tablet que foto está en cola, pero puede continuar
-    // Esto resetea la pantalla del tablet inmediatamente
-    notifyTabletCaptureComplete(codeNumber);
+    // Iniciar procesamiento de cola si no está activo
+    if (!appState.isProcessingQueue) {
+      // Pequeño delay para permitir que el UI responda primero
+      setTimeout(() => {
+        processPhotoQueue();
+      }, 100);
+    }
     
   } catch (err) {
     console.error('Error en la captura:', err);
@@ -1893,7 +1897,7 @@ async function captureAndUpload(codeNumber, photoKey) {
   }
 }
 
-// Nueva función para notificar al tablet que puede continuar
+// Función para notificar al tablet que puede continuar
 function notifyTabletCaptureComplete(codeNumber) {
   // Verificar conexión
   if (!appState.isConnectedToFirebase || !appState.firebaseRefs.status) {
@@ -1901,11 +1905,13 @@ function notifyTabletCaptureComplete(codeNumber) {
   }
   
   // Actualizar último código y permitir continuar
+  // Importante: Aquí es donde se muestra el check verde en el tablet
   appState.firebaseRefs.status.update({
     lastQrCode: codeNumber,
     photoStatus: 'captured', // Estado especial: capturado pero en cola
     captureCompleteTime: firebase.database.ServerValue.TIMESTAMP,
-    canContinue: true // Flag explícito para indicar que puede continuar
+    canContinue: true, // Flag explícito para indicar que puede continuar
+    showSuccess: true // Mostrar éxito inmediatamente
   });
 }
 
@@ -2031,26 +2037,25 @@ async function uploadToDriveFromQueue(queueItem) {
   }
 }
 
-// Actualizar badge visual de cola
+// Actualizar indicador de cola (sin número, solo animación)
 function updateQueueStatusBadge() {
-  let queueBadge = document.getElementById('queue-badge');
+  let uploadingIndicator = document.getElementById('uploading-indicator');
   
-  if (!queueBadge) {
-    queueBadge = document.createElement('div');
-    queueBadge.id = 'queue-badge';
-    queueBadge.className = 'queue-badge';
-    queueBadge.title = 'Fotos pendientes de subir';
-    document.body.appendChild(queueBadge);
+  if (!uploadingIndicator) {
+    uploadingIndicator = document.createElement('div');
+    uploadingIndicator.id = 'uploading-indicator';
+    uploadingIndicator.className = 'uploading-indicator';
+    uploadingIndicator.title = 'Subiendo fotos en segundo plano';
+    document.body.appendChild(uploadingIndicator);
   }
   
   if (appState.photoQueue.length > 0) {
-    queueBadge.textContent = appState.photoQueue.length;
-    queueBadge.style.display = 'flex';
+    uploadingIndicator.style.display = 'flex';
     
     // Actualizar estado de Drive - con la nueva clase
     updateDriveStatus('background-uploading');
   } else {
-    queueBadge.style.display = 'none';
+    uploadingIndicator.style.display = 'none';
     
     // Verificar si hay uploads completados
     if (appState.isProcessingQueue === false) {
