@@ -6,7 +6,7 @@ const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
 // Configuraciones optimizadas para iPhone 11 en horizontal
 const IMAGE_FORMAT = 'image/jpeg'; 
-const IMAGE_QUALITY = 1.0; 
+const IMAGE_QUALITY = 0.9;  // Reducido de 1.0 a 0.9 para uploads más rápidos
 const TARGET_WIDTH = 4032;  
 const TARGET_HEIGHT = 3024;
 const TARGET_RATIO = TARGET_WIDTH / TARGET_HEIGHT;
@@ -44,6 +44,12 @@ const appState = {
   isCameraInitialized: false,
   isConnectedToFirebase: false,
   lastProcessedCode: null,
+  
+  // Nuevas variables para el sistema de cola
+  photoQueue: [],
+  isProcessingQueue: false,
+  maxQueueSize: 10,
+  queueStartTime: null,
   
   // Autenticación
   tokenClient: null,
@@ -600,10 +606,13 @@ function setupPhotoStatusListener() {
 }
 
 // Handler para cambio en el status de la foto
-// MODIFICADO: Limpieza inmediata después de completar la foto
 function handlePhotoStatusChange(photoStatus) {
   switch(photoStatus) {
     case 'capturing':
+      updateDriveStatus('waiting');
+      break;
+    case 'queued':
+      // Nuevo estado para fotos en cola
       updateDriveStatus('waiting');
       break;
     case 'uploading':
@@ -1741,7 +1750,7 @@ function captureHighQualityImage(sourceElement) {
   });
 }
 
-// Función principal de captura y upload con retry automatizado
+// Función principal de captura y upload con sistema de cola
 async function captureAndUpload(codeNumber, photoKey) {
   // Verificar si está logueado
   if (!appState.accessToken) {
@@ -1755,93 +1764,267 @@ async function captureAndUpload(codeNumber, photoKey) {
     return;
   }
   
-  const maxRetries = 2;
-  let attempt = 0;
+  try {
+    // Actualizar status Firebase
+    if (appState.firebaseRefs.status) {
+      appState.firebaseRefs.status.update({
+        photoStatus: 'capturing',
+        captureTime: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+    
+    // Actualizar status de la foto específica
+    if (appState.firebaseRefs.photos && photoKey) {
+      appState.firebaseRefs.photos.child(photoKey).update({
+        status: 'capturing',
+        captureTime: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+    
+    // Mostrar mensaje simple
+    updateCameraStatus(`Capturando: ${codeNumber}`);
+    
+    // Definir nombre del archivo con extensión basada en el formato
+    const extension = IMAGE_FORMAT === 'image/png' ? '.png' : '.jpg';
+    const fileName = `${codeNumber}${extension}`;
+    
+    console.log('Capturando imagen con nombre:', fileName);
+    
+    // Capturar imagen en alta calidad
+    const imageBlob = await captureHighQualityImage(domElements.iphone.camera);
+    
+    // Añadir a la cola
+    const queueItem = {
+      blob: imageBlob,
+      fileName: fileName,
+      codeNumber: codeNumber,
+      photoKey: photoKey,
+      timestamp: Date.now(),
+      attempts: 0
+    };
+    
+    appState.photoQueue.push(queueItem);
+    
+    // Mostrar mensaje de cola
+    const queuePosition = appState.photoQueue.length;
+    updateCameraStatus(`Foto en cola (${queuePosition})`);
+    
+    // Actualizar status Firebase para cola
+    if (appState.firebaseRefs.status) {
+      appState.firebaseRefs.status.update({
+        photoStatus: 'queued',
+        queuePosition: queuePosition,
+        queueTime: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+    
+    // Actualizar status de la foto específica
+    if (appState.firebaseRefs.photos && photoKey) {
+      appState.firebaseRefs.photos.child(photoKey).update({
+        status: 'queued',
+        queuePosition: queuePosition,
+        queueTime: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+    
+    // Iniciar procesamiento de cola si no está activo
+    if (!appState.isProcessingQueue) {
+      processPhotoQueue();
+    }
+    
+    // Permitir escaneo inmediato del siguiente código QR
+    // El tablet puede continuar escaneando mientras las subidas ocurren en segundo plano
+    if (domElements.iphone.scanOverlay) {
+      setTimeout(() => {
+        domElements.iphone.scanOverlay.classList.remove('detected');
+        domElements.iphone.scanOverlay.classList.add('hidden');
+      }, 500);
+    }
+    
+    // Actualizar badge de cola
+    updateQueueStatusBadge();
+    
+  } catch (err) {
+    console.error('Error en la captura:', err);
+    updateCameraStatus('Error al capturar: ' + (err.message || 'Falla desconocida'), 'error');
+    
+    // Actualizar status Firebase
+    if (appState.firebaseRefs.status) {
+      appState.firebaseRefs.status.update({
+        photoStatus: 'error',
+        errorMessage: err.message,
+        errorTime: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+    
+    // Actualizar status de la foto específica
+    if (appState.firebaseRefs.photos && photoKey) {
+      appState.firebaseRefs.photos.child(photoKey).update({
+        status: 'error',
+        errorMessage: err.message,
+        errorTime: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+  }
+}
+
+// Procesar cola de fotos
+function processPhotoQueue() {
+  // Si la cola está vacía, terminamos
+  if (appState.photoQueue.length === 0) {
+    appState.isProcessingQueue = false;
+    updateQueueStatusBadge();
+    return;
+  }
   
-  while (attempt <= maxRetries) {
-    try {
-      // Actualizar status Firebase
-      if (appState.firebaseRefs.status) {
-        appState.firebaseRefs.status.update({
-          photoStatus: 'capturing',
-          captureTime: firebase.database.ServerValue.TIMESTAMP
-        });
-      }
+  // Si ya estamos procesando, no hacer nada
+  if (appState.isProcessingQueue) {
+    return;
+  }
+  
+  appState.isProcessingQueue = true;
+  
+  // Tomar el primer elemento de la cola
+  const queueItem = appState.photoQueue[0];
+  
+  // Actualizar mensaje de status
+  updateCameraStatus(`Subiendo: ${queueItem.codeNumber} (${appState.photoQueue.length} en cola)`);
+  
+  // Actualizar status Firebase
+  if (appState.firebaseRefs.status) {
+    appState.firebaseRefs.status.update({
+      photoStatus: 'uploading',
+      uploadStartTime: firebase.database.ServerValue.TIMESTAMP,
+      queueLength: appState.photoQueue.length
+    });
+  }
+  
+  // Actualizar status de la foto específica
+  if (appState.firebaseRefs.photos && queueItem.photoKey) {
+    appState.firebaseRefs.photos.child(queueItem.photoKey).update({
+      status: 'uploading',
+      uploadStartTime: firebase.database.ServerValue.TIMESTAMP
+    });
+  }
+  
+  // Intentar subir
+  uploadToDriveFromQueue(queueItem)
+    .then(() => {
+      // Eliminar de la cola
+      appState.photoQueue.shift();
       
-      // Actualizar status de la foto específica
-      if (appState.firebaseRefs.photos && photoKey) {
-        appState.firebaseRefs.photos.child(photoKey).update({
-          status: 'capturing',
-          captureTime: firebase.database.ServerValue.TIMESTAMP
-        });
-      }
+      // Actualizar badge de cola
+      updateQueueStatusBadge();
       
-      // Mostrar mensaje simple
-      updateCameraStatus(`Capturando: ${codeNumber}`);
+      // Procesar siguiente elemento con un pequeño delay
+      setTimeout(() => {
+        appState.isProcessingQueue = false;
+        processPhotoQueue();
+      }, 500);
+    })
+    .catch(err => {
+      console.error('Error al subir elemento de la cola:', err);
       
-      // Definir nombre del archivo con extensión basada en el formato
-      const extension = IMAGE_FORMAT === 'image/png' ? '.png' : '.jpg';
-      const fileName = `${codeNumber}${extension}`;
+      // Incrementar intentos
+      queueItem.attempts++;
       
-      console.log('Capturando imagen con nombre:', fileName);
-      
-      // Capturar imagen en alta calidad
-      const imageBlob = await captureHighQualityImage(domElements.iphone.camera);
-      
-      // Mostrar mensaje de captura
-      updateCameraStatus('Enviando a Drive...');
-      
-      // Actualizar status Firebase
-      if (appState.firebaseRefs.status) {
-        appState.firebaseRefs.status.update({
-          photoStatus: 'uploading',
-          uploadStartTime: firebase.database.ServerValue.TIMESTAMP
-        });
-      }
-      
-      // Actualizar status de la foto específica
-      if (appState.firebaseRefs.photos && photoKey) {
-        appState.firebaseRefs.photos.child(photoKey).update({
-          status: 'uploading',
-          uploadStartTime: firebase.database.ServerValue.TIMESTAMP
-        });
-      }
-      
-      // Enviar a Google Drive
-      await uploadToDrive(imageBlob, fileName, photoKey);
-      
-      // Si llegamos aquí, éxito!
-      break;
-    } catch (err) {
-      attempt++;
-      console.error(`Error en la captura (intento ${attempt}/${maxRetries+1}):`, err);
-      
-      if (attempt <= maxRetries) {
-        // Intentar nuevamente después de una pequeña pausa
-        updateCameraStatus(`Intentando nuevamente (${attempt}/${maxRetries})...`);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      } else {
-        // Desistir después de todos los intentos
-        updateCameraStatus('Error al capturar: ' + (err.message || 'Falla desconocida'), 'error');
-        
-        // Actualizar status Firebase
-        if (appState.firebaseRefs.status) {
-          appState.firebaseRefs.status.update({
-            photoStatus: 'error',
-            errorMessage: err.message,
-            errorTime: firebase.database.ServerValue.TIMESTAMP
-          });
-        }
+      if (queueItem.attempts >= 3) {
+        // Intentos máximos alcanzados, pasar al siguiente
+        appState.photoQueue.shift();
+        updateCameraStatus('La subida falló después de varios intentos', 'error');
         
         // Actualizar status de la foto específica
-        if (appState.firebaseRefs.photos && photoKey) {
-          appState.firebaseRefs.photos.child(photoKey).update({
+        if (appState.firebaseRefs.photos && queueItem.photoKey) {
+          appState.firebaseRefs.photos.child(queueItem.photoKey).update({
             status: 'error',
-            errorMessage: err.message,
+            errorMessage: 'La subida falló después de varios intentos',
             errorTime: firebase.database.ServerValue.TIMESTAMP
           });
         }
+        
+        // Continuar con el siguiente
+        setTimeout(() => {
+          appState.isProcessingQueue = false;
+          processPhotoQueue();
+        }, 500);
+      } else {
+        // Reintentar con backoff exponencial
+        const backoffDelay = Math.pow(2, queueItem.attempts) * 1000;
+        updateCameraStatus(`Reintentando en ${backoffDelay/1000}s...`, 'waiting');
+        
+        setTimeout(() => {
+          appState.isProcessingQueue = false;
+          processPhotoQueue();
+        }, backoffDelay);
       }
+      
+      // Actualizar badge de cola
+      updateQueueStatusBadge();
+    });
+}
+
+// Subir a Drive desde la cola
+async function uploadToDriveFromQueue(queueItem) {
+  if (!appState.accessToken) {
+    throw new Error('Por favor, inicie sesión primero');
+  }
+  
+  try {
+    // Mostrar mensaje de upload
+    updateCameraStatus(`Enviando ${queueItem.codeNumber}...`);
+    
+    // Intentar primer método de upload (multipart)
+    try {
+      const response = await uploadMultipart(queueItem.blob, {
+        name: queueItem.fileName,
+        mimeType: IMAGE_FORMAT,
+        parents: [FOLDER_ID]
+      });
+      
+      await handleSuccessfulUpload(response, queueItem.photoKey);
+      return;
+    } catch (err) {
+      console.error(`Error en el método de upload principal:`, err);
+      
+      // Intentar método alternativo
+      const response = await uploadWithFetch(queueItem.blob, {
+        name: queueItem.fileName,
+        mimeType: IMAGE_FORMAT,
+        parents: [FOLDER_ID]
+      });
+      
+      await handleSuccessfulUpload(response, queueItem.photoKey);
+      return;
+    }
+  } catch (err) {
+    console.error('Error en upload desde cola:', err);
+    throw err;
+  }
+}
+
+// Actualizar badge visual de cola
+function updateQueueStatusBadge() {
+  let queueBadge = document.getElementById('queue-badge');
+  
+  if (!queueBadge) {
+    queueBadge = document.createElement('div');
+    queueBadge.id = 'queue-badge';
+    queueBadge.className = 'queue-badge';
+    document.body.appendChild(queueBadge);
+  }
+  
+  if (appState.photoQueue.length > 0) {
+    queueBadge.textContent = appState.photoQueue.length;
+    queueBadge.style.display = 'flex';
+    
+    // Actualizar estado de Drive
+    updateDriveStatus('uploading');
+  } else {
+    queueBadge.style.display = 'none';
+    
+    // Verificar si hay uploads completados
+    if (appState.isProcessingQueue === false) {
+      updateDriveStatus('success');
     }
   }
 }

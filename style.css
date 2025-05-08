@@ -1291,3 +1291,43 @@ body.portrait-warning #orientation-warning {
     font-size: 96px; /* Limitar o tamanho em telas muito grandes */
   }
 }
+
+/* Badge de cola de fotos */
+.queue-badge {
+  position: fixed;
+  bottom: 70px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background-color: rgba(244, 67, 54, 0.9);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 18px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  z-index: 1000;
+  animation: pulse 1.5s infinite;
+}
+
+/* Indicador de progreso de cola */
+.upload-progress {
+  position: fixed;
+  bottom: 70px;
+  left: 20px;
+  right: 20px;
+  height: 4px;
+  background-color: rgba(255,255,255,0.3);
+  border-radius: 2px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.upload-progress-bar {
+  height: 100%;
+  background-color: #4CAF50;
+  width: 0%;
+  transition: width 0.3s ease;
+}
