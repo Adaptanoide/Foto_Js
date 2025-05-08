@@ -370,41 +370,11 @@ function handleConnectButtonClick() {
   connectToTablet(enteredCode);
 }
 
-// Actualizar estado del indicador de Drive - Versión modificada
+// Empty function that does nothing - replaces updateDriveStatus
 function updateDriveStatus(state, message) {
-  const { container, icon, text } = domElements.driveStatus;
-  if (!container || !icon) return;
-  
-  // Eliminar todas las clases de estado
-  icon.classList.remove('waiting', 'uploading', 'success', 'error', 'background-uploading');
-  
-  // Actualizar clase basada en el estado
-  if (state) {
-    // Si estamos en mode queue y uploading, usar una clase especial
-    if (state === 'uploading' && appState.photoQueue.length > 0) {
-      icon.classList.add('background-uploading');
-    } else {
-      icon.classList.add(state);
-    }
-  }
-  
-  // Eliminar completamente el texto (siempre)
-  if (text) text.textContent = '';
-  
-  // Mostrar el estado destacado
-  container.classList.add('active');
-  
-  // Tiempo más largo para éxito (5 segundos en lugar de 3)
-  if (state === 'success') {
-    // Clear any existing timeout to prevent premature hiding
-    if (window.successStatusTimeout) {
-      clearTimeout(window.successStatusTimeout);
-    }
-    
-    window.successStatusTimeout = setTimeout(() => {
-      container.classList.remove('active');
-    }, 5000); // Increased from 3000 to 5000
-  }
+  // This function intentionally left empty
+  // All status update logic has been removed
+  return; // Just return immediately
 }
 
 // Mostrar error en la pantalla de entrada de código
@@ -2054,31 +2024,10 @@ async function uploadToDriveFromQueue(queueItem) {
   }
 }
 
-// Actualizar indicador de cola (sin número, solo animación)
+// Empty function that does nothing - replaces updateQueueStatusBadge
 function updateQueueStatusBadge() {
-  let uploadingIndicator = document.getElementById('uploading-indicator');
-  
-  if (!uploadingIndicator) {
-    uploadingIndicator = document.createElement('div');
-    uploadingIndicator.id = 'uploading-indicator';
-    uploadingIndicator.className = 'uploading-indicator';
-    uploadingIndicator.title = 'Subiendo fotos en segundo plano';
-    document.body.appendChild(uploadingIndicator);
-  }
-  
-  if (appState.photoQueue.length > 0) {
-    uploadingIndicator.style.display = 'flex';
-    
-    // Actualizar estado de Drive - con la nueva clase
-    updateDriveStatus('background-uploading');
-  } else {
-    uploadingIndicator.style.display = 'none';
-    
-    // Verificar si hay uploads completados
-    if (appState.isProcessingQueue === false) {
-      updateDriveStatus('success');
-    }
-  }
+  // This function intentionally left empty
+  return; // Just return immediately
 }
 
 // Upload a Google Drive con backoff exponencial y retries
