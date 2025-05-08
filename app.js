@@ -17,16 +17,6 @@ const QR_CONFIRMATION_DELAY = 1000;  // Reducido de 2000 a 1000
 const PROCESSING_SIZE = 800;
 const AUTO_CAPTURE_DELAY = 2000;  // Reducido de 4000 a 2000
 
-Object.defineProperty(appState, 'photoCount', {
-  get: function() {
-    return this._photoCount || 0;
-  },
-  set: function(newValue) {
-    console.log('Photo count changed:', this._photoCount, '->', newValue, new Error().stack);
-    this._photoCount = newValue;
-  }
-});
-
 // Estado de la aplicación - centralizado para mayor control
 const appState = {
   currentMode: null,
@@ -2282,9 +2272,6 @@ async function handleSuccessfulUpload(response, photoKey) {
     });
   }
   
-  // IMPORTANT: DO NOT increment photo count here!
-  // ❌ Remove or comment out any code that increments appState.photoCount
-  
   updateCameraStatus('¡Foto enviada con éxito!');
   
   // Esperar un poco para mostrar el status de éxito
@@ -2311,26 +2298,4 @@ function createMultipartBody(metadata, base64Data) {
   body += `--${boundary}--`;
   
   return body;
-}
-
-// Add this function to reset the photo counter when needed
-function resetPhotoCounter() {
-  appState.photoCount = 0;
-  if (domElements.tablet.photoCount) {
-    domElements.tablet.photoCount.textContent = '0';
-  }
-}
-
-// Call this function when disconnecting from Firebase or starting a new session
-function disconnectFromFirebase() {
-  // Existing code...
-  
-  appState.isConnectedToFirebase = false;
-  appState.connectionCode = null;
-  appState.isConnected = false;
-  
-  // Reset counter when disconnecting
-  resetPhotoCounter();
-  
-  debugLog('Desconectado de Firebase');
 }

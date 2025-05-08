@@ -656,13 +656,6 @@ body.portrait-warning #orientation-warning {
   filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.8));
 }
 
-.drive-status.active .drive-icon.success {
-  opacity: 1 !important;
-  transform: scale(1.2);
-  background-color: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 0 10px rgba(76, 175, 80, 0.6);
-}
-
 .drive-icon.waiting {
   opacity: 0.6;
 }
@@ -1381,9 +1374,4 @@ body.portrait-warning #orientation-warning {
 
 .uploading-indicator:hover + .queue-info-tooltip {
   display: block;
-}
-
-/* Add this to your CSS to hide the drive status circle completely */
-.drive-status {
-  display: none !important; /* Force hiding regardless of other styles */
 }
