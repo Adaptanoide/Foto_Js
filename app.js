@@ -2004,10 +2004,9 @@ function processPhotoQueue() {
     .catch(err => {
       console.error('Error al subir elemento de la cola:', err);
       
-      // NOVO: Verificar se é erro de token (401)
       const isTokenError = err.status === 401 || 
-                          (err.message && err.message.toLowerCase().includes('unauthorized')) ||
-                          (err.message && err.message.includes('inicie sesión primero'));
+                                (err.message && err.message.toLowerCase().includes('unauthorized')) ||
+                                (err.message && err.message.includes('invalid authentication'));
       
       if (isTokenError) {
         console.warn('[QUEUE] Erro de token detectado - pausando fila');
