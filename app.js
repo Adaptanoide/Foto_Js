@@ -527,6 +527,9 @@ function setupFirebaseForTabletHost(code) {
     // Configurar input para lectura del scanner físico
     setupTabletQRInputListener();
     
+    // NOVO: Escuchar notificaciones del iPhone
+    setupTabletNotificationListener()
+
     appState.isConnectedToFirebase = true;
     debugLog('Firebase configurado para host tablet con código:', code);
   } catch (err) {
@@ -2475,4 +2478,53 @@ function analyzeUploadError(error) {
     return 'network_error';
   }
   return 'unknown';
+}
+
+// Escutar notificações no tablet
+function setupTabletNotificationListener() {
+  if (appState.currentMode !== 'tablet' || !appState.firebaseRefs.status) {
+    return;
+  }
+  
+  appState.firebaseRefs.status.on('value', (snapshot) => {
+    const data = snapshot.val();
+    
+    if (data && data.tabletNotifications) {
+      displayTabletNotifications(data.tabletNotifications);
+    }
+  });
+  
+  console.log('[TABLET] Listener de notificações ativo');
+}
+
+// Mostrar notificações na tela do tablet
+function displayTabletNotifications(notifications) {
+  // Criar container se não existir
+  let container = document.getElementById('tablet-notifications');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'tablet-notifications';
+    container.className = 'tablet-notifications';
+    document.body.appendChild(container);
+  }
+  
+  // Limpar notificações antigas
+  container.innerHTML = '';
+  
+  // Mostrar últimas 3 não vistas
+  const recent = notifications.filter(n => !n.seen).slice(-3);
+  
+  recent.forEach(notification => {
+    const div = document.createElement('div');
+    div.className = `tablet-notification ${notification.type}`;
+    div.textContent = notification.message;
+    container.appendChild(div);
+    
+    // Auto-remover após 8 segundos
+    setTimeout(() => {
+      if (div.parentElement) {
+        div.remove();
+      }
+    }, 8000);
+  });
 }
