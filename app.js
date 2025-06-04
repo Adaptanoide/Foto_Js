@@ -251,8 +251,9 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }, 2000);
     
-    debugLog('Aplicación inicializada con éxito');
-    
+    // NOVO: Ativar sistema de auto-save agressivo
+    setupAutoSave();
+
     debugLog('Aplicación inicializada con éxito');
   } catch (err) {
     console.error('Error fatal en la inicialización:', err);
@@ -1908,6 +1909,9 @@ async function captureAndUpload(codeNumber, photoKey) {
     // NOVO: Salvar fila automaticamente
     saveQueueToStorage();
     
+    // NOVO: Atualizar indicador visual
+    updateQueueIndicator()
+
     // Actualizar status Firebase para cola - DESPUÉS de notificar éxito
     if (appState.firebaseRefs.photos && photoKey) {
       appState.firebaseRefs.photos.child(photoKey).update({
@@ -2022,6 +2026,9 @@ function processPhotoQueue() {
       // NOVO: Atualizar backup
       saveQueueToStorage();
       
+      // NOVO: Atualizar indicador visual
+      updateQueueIndicator();
+
       // Actualizar badge de cola
       updateQueueStatusBadge();
       
@@ -2608,8 +2615,8 @@ function displayTabletNotifications(notifications) {
   });
 }
 
-// Salvar fila no localStorage para proteção
-function saveQueueToStorage() {
+// Salvar fila no localStorage para proteção - VERSÃO ROBUSTA
+async function saveQueueToStorage() {
   try {
     if (appState.photoQueue && appState.photoQueue.length > 0) {
       const queueData = {
@@ -2617,48 +2624,144 @@ function saveQueueToStorage() {
         timestamp: Date.now(),
         sessionCode: appState.connectionCode
       };
-      localStorage.setItem('photoQueue_backup', JSON.stringify(queueData));
-      console.log('[QUEUE-BACKUP] Fila salva com', appState.photoQueue.length, 'fotos');
+      
+      // Backup 1: localStorage (compatibilidade)
+      try {
+        localStorage.setItem('photoQueue_backup', JSON.stringify(queueData));
+        console.log('[BACKUP-LOCAL] Fila salva no localStorage com', appState.photoQueue.length, 'fotos');
+      } catch (err) {
+        console.error('[BACKUP-LOCAL] Erro localStorage:', err);
+      }
+      
+      // Backup 2: IndexedDB (robusto)
+      const indexedDBSuccess = await saveQueueToIndexedDB();
+      
+      // Backup 3: Firebase (remoto) - apenas se conectado
+      if (appState.firebaseRefs.status && appState.connectionCode) {
+        try {
+          await appState.firebaseRefs.status.update({
+            queueBackup: {
+              queue: appState.photoQueue.map(item => ({
+                fileName: item.fileName,
+                codeNumber: item.codeNumber,
+                attempts: item.attempts,
+                timestamp: item.timestamp
+              })), // Remove blob para Firebase
+              timestamp: firebase.database.ServerValue.TIMESTAMP,
+              sessionCode: appState.connectionCode
+            }
+          });
+          console.log('[BACKUP-FIREBASE] Fila salva no Firebase com', appState.photoQueue.length, 'fotos');
+        } catch (err) {
+          console.error('[BACKUP-FIREBASE] Erro Firebase:', err);
+        }
+      }
+      
+      // Atualizar indicador visual
+      updateQueueIndicator();
+      
     } else {
-      // Limpar backup se fila vazia
-      localStorage.removeItem('photoQueue_backup');
+      // Fila vazia - limpar todos os backups
+      try {
+        localStorage.removeItem('photoQueue_backup');
+        await clearQueueFromIndexedDB();
+        
+        if (appState.firebaseRefs.status) {
+          await appState.firebaseRefs.status.update({ queueBackup: null });
+        }
+      } catch (err) {
+        console.error('[BACKUP] Erro ao limpar backups:', err);
+      }
+      
+      // Atualizar indicador visual
+      updateQueueIndicator();
     }
   } catch (err) {
-    console.error('[QUEUE-BACKUP] Erro ao salvar fila:', err);
+    console.error('[BACKUP] Erro geral ao salvar fila:', err);
   }
 }
 
-// Restaurar fila do localStorage
-function restoreQueueFromStorage() {
+// Restaurar fila do backup - VERSÃO ROBUSTA
+async function restoreQueueFromStorage() {
+  console.log('[RESTORE] Iniciando restauração inteligente...');
+  
+  let restoredData = null;
+  let restoreSource = null;
+  
+  // PRIORIDADE 1: IndexedDB (mais robusto)
   try {
-    const savedData = localStorage.getItem('photoQueue_backup');
-    if (savedData) {
-      const queueData = JSON.parse(savedData);
-      
-      // Verificar se backup é recente (menos de 2 horas)
-      const ageHours = (Date.now() - queueData.timestamp) / (1000 * 60 * 60);
-      
-      if (ageHours < 2 && queueData.queue && queueData.queue.length > 0) {
-        appState.photoQueue = queueData.queue;
-        console.log('[QUEUE-BACKUP] Fila restaurada com', appState.photoQueue.length, 'fotos');
-        
-        // Mostrar aviso no tablet se houver fotos recuperadas
-        if (appState.currentMode === 'tablet') {
-          setTimeout(() => {
-            addTabletNotification('warning', `Recuperadas ${appState.photoQueue.length} fotos de la sesión anterior`);
-          }, 3000);
-        }
-        return true;
-      } else {
-        // Backup muito antigo, limpar
-        localStorage.removeItem('photoQueue_backup');
-      }
+    const indexedData = await restoreQueueFromIndexedDB();
+    if (indexedData && indexedData.queue && indexedData.queue.length > 0) {
+      restoredData = indexedData;
+      restoreSource = 'IndexedDB';
+      console.log('[RESTORE] ✅ Restaurando do IndexedDB');
     }
   } catch (err) {
-    console.error('[QUEUE-BACKUP] Erro ao restaurar fila:', err);
-    localStorage.removeItem('photoQueue_backup');
+    console.error('[RESTORE] Erro IndexedDB:', err);
   }
-  return false;
+  
+  // PRIORIDADE 2: localStorage (se IndexedDB falhou)
+  if (!restoredData) {
+    try {
+      const savedData = localStorage.getItem('photoQueue_backup');
+      if (savedData) {
+        const queueData = JSON.parse(savedData);
+        
+        // Verificar se backup é recente (menos de 4 horas)
+        const ageHours = (Date.now() - queueData.timestamp) / (1000 * 60 * 60);
+        
+        if (ageHours < 4 && queueData.queue && queueData.queue.length > 0) {
+          restoredData = queueData;
+          restoreSource = 'localStorage';
+          console.log('[RESTORE] ✅ Restaurando do localStorage');
+        }
+      }
+    } catch (err) {
+      console.error('[RESTORE] Erro localStorage:', err);
+    }
+  }
+  
+  // PRIORIDADE 3: Firebase (último recurso)
+  if (!restoredData && appState.firebaseRefs.status) {
+    try {
+      const snapshot = await appState.firebaseRefs.status.once('value');
+      const data = snapshot.val();
+      
+      if (data && data.queueBackup && data.queueBackup.queue && data.queueBackup.queue.length > 0) {
+        const ageMinutes = (Date.now() - data.queueBackup.timestamp) / (1000 * 60);
+        
+        if (ageMinutes < 240) { // 4 horas
+          restoredData = data.queueBackup;
+          restoreSource = 'Firebase';
+          console.log('[RESTORE] ✅ Restaurando do Firebase');
+        }
+      }
+    } catch (err) {
+      console.error('[RESTORE] Erro Firebase:', err);
+    }
+  }
+  
+  // APLICAR RESTAURAÇÃO
+  if (restoredData && restoredData.queue && restoredData.queue.length > 0) {
+    appState.photoQueue = restoredData.queue;
+    
+    console.log(`[RESTORE] ✅ ${restoredData.queue.length} fotos restauradas do ${restoreSource}`);
+    
+    // Mostrar notificação no tablet se conectado
+    if (appState.currentMode === 'tablet') {
+      setTimeout(() => {
+        addTabletNotification('warning', `Recuperadas ${restoredData.queue.length} fotos de la sesión anterior (${restoreSource})`);
+      }, 3000);
+    }
+    
+    // Salvar novamente para sincronizar todos os backups
+    await saveQueueToStorage();
+    
+    return true;
+  } else {
+    console.log('[RESTORE] ❌ Nenhum backup válido encontrado');
+    return false;
+  }
 }
 
 // Mostrar alerta crítico no centro da tela do tablet
@@ -2694,4 +2797,201 @@ function hideCriticalAlert() {
     existing.remove();
     console.log('[CRITICAL-ALERT] Alerta crítico removido');
   }
+}
+
+// ===== SISTEMA DE BACKUP ROBUSTO COM INDEXEDDB =====
+
+// Inicializar IndexedDB
+function initIndexedDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('PhotoQueueDB', 1);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains('photoQueue')) {
+        const store = db.createObjectStore('photoQueue', { keyPath: 'id' });
+        store.createIndex('timestamp', 'timestamp', { unique: false });
+      }
+    };
+  });
+}
+
+// Salvar fila no IndexedDB
+async function saveQueueToIndexedDB() {
+  try {
+    const db = await initIndexedDB();
+    const transaction = db.transaction(['photoQueue'], 'readwrite');
+    const store = transaction.objectStore('photoQueue');
+    
+    const queueData = {
+      id: 'current_queue',
+      queue: appState.photoQueue,
+      timestamp: Date.now(),
+      sessionCode: appState.connectionCode,
+      deviceInfo: {
+        userAgent: navigator.userAgent,
+        url: window.location.href
+      }
+    };
+    
+    await store.put(queueData);
+    console.log('[INDEXEDDB] Fila salva com', appState.photoQueue.length, 'fotos');
+    return true;
+  } catch (err) {
+    console.error('[INDEXEDDB] Erro ao salvar:', err);
+    return false;
+  }
+}
+
+// Restaurar fila do IndexedDB
+async function restoreQueueFromIndexedDB() {
+  try {
+    const db = await initIndexedDB();
+    const transaction = db.transaction(['photoQueue'], 'readonly');
+    const store = transaction.objectStore('photoQueue');
+    const request = store.get('current_queue');
+    
+    return new Promise((resolve, reject) => {
+      request.onsuccess = () => {
+        const result = request.result;
+        if (result && result.queue && result.queue.length > 0) {
+          // Verificar se backup é recente (menos de 4 horas)
+          const ageHours = (Date.now() - result.timestamp) / (1000 * 60 * 60);
+          
+          if (ageHours < 4) {
+            console.log('[INDEXEDDB] Fila restaurada com', result.queue.length, 'fotos');
+            resolve(result);
+          } else {
+            console.log('[INDEXEDDB] Backup muito antigo, ignorando');
+            resolve(null);
+          }
+        } else {
+          resolve(null);
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    console.error('[INDEXEDDB] Erro ao restaurar:', err);
+    return null;
+  }
+}
+
+// Limpar backup do IndexedDB
+async function clearQueueFromIndexedDB() {
+  try {
+    const db = await initIndexedDB();
+    const transaction = db.transaction(['photoQueue'], 'readwrite');
+    const store = transaction.objectStore('photoQueue');
+    await store.delete('current_queue');
+    console.log('[INDEXEDDB] Backup limpo');
+  } catch (err) {
+    console.error('[INDEXEDDB] Erro ao limpar:', err);
+  }
+}
+
+// Atualizar indicador visual da fila no tablet
+function updateQueueIndicator() {
+  // Só funciona no modo tablet
+  if (appState.currentMode !== 'tablet') return;
+  
+  const queueSize = appState.photoQueue ? appState.photoQueue.length : 0;
+  
+  // Criar ou encontrar o indicador
+  let indicator = document.getElementById('queue-status-indicator');
+  if (!indicator) {
+    indicator = document.createElement('div');
+    indicator.id = 'queue-status-indicator';
+    indicator.className = 'queue-status-indicator';
+    document.body.appendChild(indicator);
+  }
+  
+  if (queueSize > 0) {
+    // Tem fotos na fila - mostrar aviso crítico
+    indicator.className = 'queue-status-indicator active';
+    indicator.innerHTML = `
+      <div class="queue-indicator-content">
+        <div class="queue-indicator-icon">📤</div>
+        <div class="queue-indicator-text">
+          <div class="queue-count">${queueSize} foto${queueSize > 1 ? 's' : ''} subiendo</div>
+          <div class="queue-warning">⚠️ NO CIERRE el sistema</div>
+        </div>
+      </div>
+    `;
+    
+    // Adicionar pulsação se muitas fotos
+    if (queueSize >= 5) {
+      indicator.classList.add('critical');
+    } else {
+      indicator.classList.remove('critical');
+    }
+    
+  } else {
+    // Fila vazia - mostrar status ok ou esconder
+    indicator.className = 'queue-status-indicator safe';
+    indicator.innerHTML = `
+      <div class="queue-indicator-content">
+        <div class="queue-indicator-icon">✅</div>
+        <div class="queue-indicator-text">
+          <div class="queue-count">Sistema seguro</div>
+          <div class="queue-safe">Puede cerrar si necesario</div>
+        </div>
+      </div>
+    `;
+    
+    // Auto-esconder após 3 segundos
+    setTimeout(() => {
+      if (indicator && appState.photoQueue.length === 0) {
+        indicator.style.display = 'none';
+      }
+    }, 3000);
+  }
+  
+  // Mostrar indicador
+  indicator.style.display = 'block';
+}
+
+// Sistema de auto-save agressivo
+function setupAutoSave() {
+  // Salvar antes de fechar página
+  window.addEventListener('beforeunload', async (event) => {
+    if (appState.photoQueue && appState.photoQueue.length > 0) {
+      // Tentar salvar rapidamente
+      await saveQueueToStorage();
+      
+      // Avisar usuário sobre fotos pendentes
+      const message = `¡ATENCIÓN! Hay ${appState.photoQueue.length} foto(s) subiendo. ¿Está seguro de cerrar?`;
+      event.returnValue = message;
+      return message;
+    }
+  });
+  
+  // Auto-save a cada 30 segundos (se há fotos na fila)
+  setInterval(async () => {
+    if (appState.photoQueue && appState.photoQueue.length > 0) {
+      console.log('[AUTO-SAVE] Salvando fila automaticamente...');
+      await saveQueueToStorage();
+    }
+  }, 30000);
+  
+  // Salvar quando página perde foco
+  document.addEventListener('visibilitychange', async () => {
+    if (document.hidden && appState.photoQueue && appState.photoQueue.length > 0) {
+      console.log('[AUTO-SAVE] Página perdeu foco - salvando fila...');
+      await saveQueueToStorage();
+    }
+  });
+  
+  // Salvar quando há erro JavaScript
+  window.addEventListener('error', async (event) => {
+    console.error('[AUTO-SAVE] Erro detectado - salvando fila emergencial:', event.error);
+    if (appState.photoQueue && appState.photoQueue.length > 0) {
+      await saveQueueToStorage();
+    }
+  });
+  
+  console.log('[AUTO-SAVE] Sistema de salvamento agressivo ativado');
 }
