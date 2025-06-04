@@ -1368,8 +1368,13 @@ function handleTokenResponse(tokenResponse) {
     
     console.log(`[TOKEN] Token atualizado - expira em ${Math.floor(expiresIn/60)} minutos`);
     
-    // NOVO: Esconder alerta crítico quando token for renovado
-    hideCriticalAlert();
+    // NOVO: Enviar comando para esconder alerta crítico
+    if (appState.firebaseRefs.status) {
+      appState.firebaseRefs.status.update({
+        hideCriticalAlert: true,
+        hideAlertTimestamp: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
 
     updateAuthUIState(true);
     
