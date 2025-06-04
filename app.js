@@ -237,6 +237,22 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     }, 3000);
 
+    // NOVO: Restaurar fila de fotos se existir backup
+    setTimeout(() => {
+      const queueRestored = restoreQueueFromStorage();
+      if (queueRestored && appState.currentMode === 'iphone') {
+        // Se restaurou fotos e estamos no iPhone, tentar retomar processamento
+        setTimeout(() => {
+          if (!appState.isProcessingQueue && appState.photoQueue.length > 0) {
+            console.log('[QUEUE-BACKUP] Retomando processamento de fila restaurada');
+            processPhotoQueue();
+          }
+        }, 5000);
+      }
+    }, 2000);
+    
+    debugLog('Aplicación inicializada con éxito');
+    
     debugLog('Aplicación inicializada con éxito');
   } catch (err) {
     console.error('Error fatal en la inicialización:', err);
@@ -1352,6 +1368,9 @@ function handleTokenResponse(tokenResponse) {
     
     console.log(`[TOKEN] Token atualizado - expira em ${Math.floor(expiresIn/60)} minutos`);
     
+    // NOVO: Esconder alerta crítico quando token for renovado
+    hideCriticalAlert();
+
     updateAuthUIState(true);
     
     // Iniciar cámara y pantalla principal
@@ -1880,6 +1899,9 @@ async function captureAndUpload(codeNumber, photoKey) {
     };
     
     appState.photoQueue.push(queueItem);
+
+    // NOVO: Salvar fila automaticamente
+    saveQueueToStorage();
     
     // Actualizar status Firebase para cola - DESPUÉS de notificar éxito
     if (appState.firebaseRefs.photos && photoKey) {
@@ -1992,6 +2014,9 @@ function processPhotoQueue() {
       // Eliminar de la cola
       appState.photoQueue.shift();
       
+      // NOVO: Atualizar backup
+      saveQueueToStorage();
+      
       // Actualizar badge de cola
       updateQueueStatusBadge();
       
@@ -2011,7 +2036,7 @@ function processPhotoQueue() {
       if (isTokenError) {
         console.warn('[QUEUE] Erro de token detectado - pausando fila');
         appState.isProcessingQueue = false;
-        updateCameraStatus('⚠️ Erro de autenticação - Fila pausada', 'error');
+        updateCameraStatus('⚠️ Error de autenticación - Cola pausada', 'error');
         return; // Parar aqui, não incrementar tentativas
       }
       
@@ -2021,6 +2046,10 @@ function processPhotoQueue() {
       if (queueItem.attempts >= 3) {
         // Intentos máximos alcanzados, pasar al siguiente
         appState.photoQueue.shift();
+        
+        // NOVO: Atualizar backup
+        saveQueueToStorage();
+        
         updateCameraStatus('La subida falló después de varios intentos', 'error');
         
         // Actualizar status de la foto específica
@@ -2390,7 +2419,10 @@ async function attemptSilentTokenRenewal() {
           console.log('[TOKEN] Renovação silenciosa bem-sucedida');
           handleTokenResponse(tokenResponse);
           appState.tokenWarningShown = false;
-          addTabletNotification('success', 'Token renovado automaticamente');
+          
+          // NOVO: Esconder alerta crítico e mostrar sucesso
+          hideCriticalAlert();
+          addTabletNotification('success', 'Token renovado automáticamente');
         } else {
           console.warn('[TOKEN] Renovação silenciosa falhou');
           handleTokenExpiration();
@@ -2414,12 +2446,19 @@ function handleTokenExpiration() {
   // Parar fila de upload
   appState.isProcessingQueue = false;
   
-  // Notificar tablet
-  addTabletNotification('error', 'Autenticação expirada - Renovação necessária');
+// Notificar tablet
+  addTabletNotification('error', 'Autenticación expirada - Se requiere renovación');
+  
+  // NOVO: Mostrar alerta crítico no tablet
+  showCriticalAlert(
+    'Autenticación Expirada',
+    'Las fotos están pausadas y seguras. Se requiere renovar la autenticación.',
+    '1. Vaya al iPhone<br>2. Haga clic para aprobar la autenticación<br>3. Regrese a la tablet - el sistema continuará automáticamente'
+  );
   
   // iPhone: status discreto
   if (appState.currentMode === 'iphone') {
-    updateCameraStatus('⚠️ Renovação necessária', 'error');
+    updateCameraStatus('⚠️ Renovación necesaria', 'error');
   }
   
   // Limpar token inválido
@@ -2431,7 +2470,7 @@ function handleTokenExpiration() {
 }
 
 function showTokenWarning(minutesLeft) {
-  addTabletNotification('warning', `Token expira em ${minutesLeft} minutos`);
+  addTabletNotification('warning', `El token expira en ${minutesLeft} minutos`);
   console.log(`[TOKEN] Aviso de expiração - ${minutesLeft} minutos restantes`);
 }
 
@@ -2527,4 +2566,92 @@ function displayTabletNotifications(notifications) {
       }
     }, 8000);
   });
+}
+
+// Salvar fila no localStorage para proteção
+function saveQueueToStorage() {
+  try {
+    if (appState.photoQueue && appState.photoQueue.length > 0) {
+      const queueData = {
+        queue: appState.photoQueue,
+        timestamp: Date.now(),
+        sessionCode: appState.connectionCode
+      };
+      localStorage.setItem('photoQueue_backup', JSON.stringify(queueData));
+      console.log('[QUEUE-BACKUP] Fila salva com', appState.photoQueue.length, 'fotos');
+    } else {
+      // Limpar backup se fila vazia
+      localStorage.removeItem('photoQueue_backup');
+    }
+  } catch (err) {
+    console.error('[QUEUE-BACKUP] Erro ao salvar fila:', err);
+  }
+}
+
+// Restaurar fila do localStorage
+function restoreQueueFromStorage() {
+  try {
+    const savedData = localStorage.getItem('photoQueue_backup');
+    if (savedData) {
+      const queueData = JSON.parse(savedData);
+      
+      // Verificar se backup é recente (menos de 2 horas)
+      const ageHours = (Date.now() - queueData.timestamp) / (1000 * 60 * 60);
+      
+      if (ageHours < 2 && queueData.queue && queueData.queue.length > 0) {
+        appState.photoQueue = queueData.queue;
+        console.log('[QUEUE-BACKUP] Fila restaurada com', appState.photoQueue.length, 'fotos');
+        
+        // Mostrar aviso no tablet se houver fotos recuperadas
+        if (appState.currentMode === 'tablet') {
+          setTimeout(() => {
+            addTabletNotification('warning', `Recuperadas ${appState.photoQueue.length} fotos de la sesión anterior`);
+          }, 3000);
+        }
+        return true;
+      } else {
+        // Backup muito antigo, limpar
+        localStorage.removeItem('photoQueue_backup');
+      }
+    }
+  } catch (err) {
+    console.error('[QUEUE-BACKUP] Erro ao restaurar fila:', err);
+    localStorage.removeItem('photoQueue_backup');
+  }
+  return false;
+}
+
+// Mostrar alerta crítico no centro da tela do tablet
+function showCriticalAlert(title, message, instructions) {
+  // Só mostrar no tablet
+  if (appState.currentMode !== 'tablet') return;
+  
+  // Remover alerta existente se houver
+  hideCriticalAlert();
+  
+  const overlay = document.createElement('div');
+  overlay.id = 'critical-alert-overlay';
+  overlay.className = 'critical-alert-overlay';
+  
+  overlay.innerHTML = `
+    <div class="critical-alert-content">
+      <div class="critical-alert-icon">🚨</div>
+      <div class="critical-alert-title">${title}</div>
+      <div class="critical-alert-message">${message}</div>
+      <div class="critical-alert-instructions">${instructions}</div>
+      <div class="critical-alert-status">Este mensaje desaparecerá automáticamente cuando se resuelva el problema</div>
+    </div>
+  `;
+  
+  document.body.appendChild(overlay);
+  console.log('[CRITICAL-ALERT] Alerta crítico mostrado:', title);
+}
+
+// Esconder alerta crítico
+function hideCriticalAlert() {
+  const existing = document.getElementById('critical-alert-overlay');
+  if (existing) {
+    existing.remove();
+    console.log('[CRITICAL-ALERT] Alerta crítico removido');
+  }
 }
