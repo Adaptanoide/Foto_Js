@@ -2554,8 +2554,8 @@ function setupTabletNotificationListener() {
         });
       }, 1000);
     }
-
-        // NOVO: Escutar comando para esconder alerta crítico
+    
+    // NOVO: Escutar comando para esconder alerta crítico
     if (data && data.hideCriticalAlert) {
       hideCriticalAlert();
       
