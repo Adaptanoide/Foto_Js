@@ -2420,8 +2420,13 @@ async function attemptSilentTokenRenewal() {
           handleTokenResponse(tokenResponse);
           appState.tokenWarningShown = false;
           
-          // NOVO: Esconder alerta crítico e mostrar sucesso
-          hideCriticalAlert();
+          // NOVO: Enviar comando para esconder alerta crítico
+          if (appState.firebaseRefs.status) {
+            appState.firebaseRefs.status.update({
+              hideCriticalAlert: true,
+              hideAlertTimestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+          }
           addTabletNotification('success', 'Token renovado automáticamente');
         } else {
           console.warn('[TOKEN] Renovação silenciosa falhou');
@@ -2449,12 +2454,17 @@ function handleTokenExpiration() {
 // Notificar tablet
   addTabletNotification('error', 'Autenticación expirada - Se requiere renovación');
   
-  // NOVO: Mostrar alerta crítico no tablet
-  showCriticalAlert(
-    'Autenticación Expirada',
-    'Las fotos están pausadas y seguras. Se requiere renovar la autenticación.',
-    '1. Vaya al iPhone<br>2. Haga clic para aprobar la autenticación<br>3. Regrese a la tablet - el sistema continuará automáticamente'
-  );
+// NOVO: Enviar comando para tablet mostrar alerta crítico
+  if (appState.firebaseRefs.status) {
+    appState.firebaseRefs.status.update({
+      showCriticalAlert: {
+        title: 'Autenticación Expirada',
+        message: 'Las fotos están pausadas y seguras. Se requiere renovar la autenticación.',
+        instructions: '1. Vaya al iPhone<br>2. Haga clic para aprobar la autenticación<br>3. Regrese a la tablet - el sistema continuará automáticamente',
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      }
+    });
+  }
   
   // iPhone: status discreto
   if (appState.currentMode === 'iphone') {
@@ -2530,6 +2540,31 @@ function setupTabletNotificationListener() {
     
     if (data && data.tabletNotifications) {
       displayTabletNotifications(data.tabletNotifications);
+    }
+    
+    // NOVO: Escutar comandos de alerta crítico
+    if (data && data.showCriticalAlert) {
+      const alertData = data.showCriticalAlert;
+      showCriticalAlert(alertData.title, alertData.message, alertData.instructions);
+      
+      // Limpar comando após processar (para não repetir)
+      setTimeout(() => {
+        appState.firebaseRefs.status.update({
+          showCriticalAlert: null
+        });
+      }, 1000);
+    }
+
+        // NOVO: Escutar comando para esconder alerta crítico
+    if (data && data.hideCriticalAlert) {
+      hideCriticalAlert();
+      
+      // Limpar comando após processar
+      setTimeout(() => {
+        appState.firebaseRefs.status.update({
+          hideCriticalAlert: null
+        });
+      }, 1000);
     }
   });
   
