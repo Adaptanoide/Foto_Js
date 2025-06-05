@@ -2741,9 +2741,35 @@ async function restoreQueueFromStorage() {
     }
   }
   
-  // APLICAR RESTAURAÇÃO
+  // APLICAR RESTAURAÇÃO - COM VALIDAÇÃO DE BLOB
   if (restoredData && restoredData.queue && restoredData.queue.length > 0) {
-    appState.photoQueue = restoredData.queue;
+    // FILTRAR APENAS FOTOS REAIS (com blob válido)
+    const validPhotos = restoredData.queue.filter(photo => {
+      return photo.blob && 
+             photo.blob instanceof Blob && 
+             photo.fileName && 
+             !photo.fileName.includes('teste');
+    });
+    
+    if (validPhotos.length > 0) {
+      appState.photoQueue = validPhotos;
+      console.log(`[RESTORE] ✅ ${validPhotos.length} fotos REAIS restauradas (${restoredData.queue.length - validPhotos.length} fake ignoradas)`);
+    } else {
+      appState.photoQueue = [];
+      console.log('[RESTORE] ❌ Só havia fotos fake - fila limpa');
+      
+      // Limpar todos os backups se só havia fotos fake
+      try {
+        localStorage.removeItem('photoQueue_backup');
+        await clearQueueFromIndexedDB();
+        if (appState.firebaseRefs.status) {
+          await appState.firebaseRefs.status.update({ queueBackup: null });
+        }
+      } catch (err) {
+        console.error('[RESTORE] Erro ao limpar backups fake:', err);
+      }
+      return false;
+    }
     
     console.log(`[RESTORE] ✅ ${restoredData.queue.length} fotos restauradas do ${restoreSource}`);
     
