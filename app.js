@@ -3302,9 +3302,12 @@ function handleAutomaticTokenRenewal() {
   showRenewalButtonOnIphone();
 }
 
-// Mostrar instruções de renovação manual no iPhone
+// Versão FINAL - Instrução clara e simples
 function showRenewalButtonOnIphone() {
-  // Criar overlay com instruções claras
+  const oldOverlay = document.getElementById('renewal-overlay');
+  if (oldOverlay) oldOverlay.remove();
+  
+  // Instrução clara e visível
   const overlay = document.createElement('div');
   overlay.id = 'renewal-overlay';
   overlay.style.cssText = `
@@ -3326,21 +3329,27 @@ function showRenewalButtonOnIphone() {
       padding: 30px;
       border-radius: 16px;
       text-align: center;
-      max-width: 350px;
+      max-width: 320px;
       width: 90%;
     ">
-      <div style="font-size: 48px; margin-bottom: 16px;">🔄</div>
-      <h3 style="margin: 0 0 16px 0; color: #333;">Renovar Autenticación</h3>
-      <p style="margin: 0 0 20px 0; color: #666; line-height: 1.4;">
-        Haga clic en el botón <strong>Google Auth</strong> (👤) 
-        en la esquina superior derecha para renovar
-      </p>
-      <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-        <p style="margin: 0; font-size: 14px; color: #666;">
-          📍 Busque el ícono 👤 arriba a la derecha
-        </p>
+      <div style="font-size: 48px; margin-bottom: 20px;">👆</div>
+      <h3 style="margin: 0 0 20px 0; color: #333;">Para Renovar Token:</h3>
+      <div style="
+        background: #4CAF50;
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 20px 0;
+        font-weight: bold;
+        font-size: 16px;
+      ">
+        Haga clic en el botón 👤<br>
+        (arriba a la derecha)
       </div>
-      <button id="iphone-close-btn" style="
+      <p style="margin: 0 0 20px 0; color: #666; font-size: 14px;">
+        El botón verde con ícono de usuario
+      </p>
+      <button onclick="this.parentElement.parentElement.remove()" style="
         background: #2196F3;
         color: white;
         border: none;
@@ -3349,31 +3358,21 @@ function showRenewalButtonOnIphone() {
         font-size: 16px;
         cursor: pointer;
         width: 100%;
-      ">Entendido</button>
+      ">Entendido ✓</button>
     </div>
   `;
   
   document.body.appendChild(overlay);
   
-  // Event listener para fechar
-  const closeBtn = overlay.querySelector('#iphone-close-btn');
-  closeBtn.addEventListener('click', () => {
-    overlay.remove();
-    updateCameraStatus('👆 Haga clic en el ícono 👤 para renovar', 'info');
-  });
+  // Notificar tablet
+  addTabletNotification('info', '📱 Instrucciones enviadas al iPhone');
   
-  // Notificar tablet das instruções
+  // Limpar comando
   if (appState.firebaseRefs.status) {
-    appState.firebaseRefs.status.update({
-      renewTokenRequest: {
-        status: 'manual_instruction',
-        message: 'Instrucciones mostradas en iPhone',
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-      }
-    });
+    appState.firebaseRefs.status.update({ renewTokenRequest: null });
   }
   
-  addTabletNotification('info', 'Instrucciones enviadas al iPhone - usuario debe hacer clic en 👤');
+  updateCameraStatus('👆 Haga clic en 👤 (arriba derecha)', 'info');
 }
 
 // Tratar erro na renovação
