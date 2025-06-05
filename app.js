@@ -3285,58 +3285,102 @@ function handleTokenRenewalRequest() {
 
 // Renovação automática de token solicitada pelo tablet
 function handleAutomaticTokenRenewal() {
-  console.log('[TOKEN-RENEWAL] 🔄 Iniciando renovação automática solicitada pelo tablet');
+  console.log('[TOKEN-RENEWAL] 🔄 Preparando renovação solicitada pelo tablet');
   
   // Notificar tablet que está processando
   if (appState.firebaseRefs.status) {
     appState.firebaseRefs.status.update({
       renewTokenRequest: {
-        status: 'processing',
-        message: 'Abriendo popup de autenticación...',
+        status: 'waiting_user_action',
+        message: 'Aguardando ação do usuário no iPhone...',
         timestamp: firebase.database.ServerValue.TIMESTAMP
       }
     });
   }
   
-  // Status no iPhone
-  updateCameraStatus('🔄 Renovando token...', 'info');
+  // MOSTRAR BOTÃO NO IPHONE em vez de popup automático
+  showRenewalButtonOnIphone();
+}
+
+// Mostrar botão de renovação no iPhone
+function showRenewalButtonOnIphone() {
+  // Criar overlay com botão no iPhone
+  const overlay = document.createElement('div');
+  overlay.id = 'renewal-overlay';
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  `;
   
-  try {
-    if (appState.tokenClient) {
-      // Tentar renovação com prompt
-      appState.tokenClient.requestAccessToken({
-        prompt: 'consent',
-        callback: (tokenResponse) => {
-          if (tokenResponse && tokenResponse.access_token) {
-            console.log('[TOKEN-RENEWAL] ✅ Renovação bem-sucedida via tablet!');
-            
-            // Processar token normalmente
-            handleTokenResponse(tokenResponse);
-            
-            // Notificar tablet do sucesso
-            addTabletNotification('success', '✅ Token renovado com sucesso!');
-            
-            // Limpar comando de renovação
-            appState.firebaseRefs.status.update({
-              renewTokenRequest: null
-            });
-            
-            updateCameraStatus('✅ Token renovado com sucesso!', 'success');
-            
-          } else {
-            handleTokenRenewalError('Token não recebido');
-          }
-        },
-        error_callback: (error) => {
-          handleTokenRenewalError(error.message || 'Erro na autenticação');
+  overlay.innerHTML = `
+    <div style="
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      text-align: center;
+      max-width: 300px;
+      width: 90%;
+    ">
+      <div style="font-size: 48px; margin-bottom: 16px;">🔄</div>
+      <h3 style="margin: 0 0 16px 0; color: #333;">Renovar Token</h3>
+      <p style="margin: 0 0 24px 0; color: #666;">Toque para aprovar la renovación</p>
+      <button id="iphone-renew-btn" style="
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 16px 32px;
+        border-radius: 12px;
+        font-size: 18px;
+        font-weight: bold;
+        cursor: pointer;
+        width: 100%;
+      ">Renovar Ahora</button>
+    </div>
+  `;
+  
+  document.body.appendChild(overlay);
+  
+  // Event listener para o botão
+  const renewBtn = overlay.querySelector('#iphone-renew-btn');
+  renewBtn.addEventListener('click', () => {
+    renewBtn.disabled = true;
+    renewBtn.innerHTML = '⏳ Renovando...';
+    
+    // AGORA sim, tentar renovação (iniciada por clique do usuário)
+    appState.tokenClient.requestAccessToken({
+      prompt: 'consent',
+      callback: (tokenResponse) => {
+        if (tokenResponse && tokenResponse.access_token) {
+          console.log('[TOKEN-RENEWAL] ✅ Renovação bem-sucedida!');
+          handleTokenResponse(tokenResponse);
+          addTabletNotification('success', '✅ Token renovado com sucesso!');
+          
+          // Remover overlay
+          overlay.remove();
+          
+          // Limpar comando
+          appState.firebaseRefs.status.update({ renewTokenRequest: null });
+        } else {
+          handleTokenRenewalError('Token não recebido');
+          overlay.remove();
         }
-      });
-    } else {
-      handleTokenRenewalError('Cliente de token não disponível');
-    }
-  } catch (error) {
-    handleTokenRenewalError('Erro ao iniciar renovação: ' + error.message);
-  }
+      },
+      error_callback: (error) => {
+        handleTokenRenewalError(error.message || 'Erro na autenticação');
+        overlay.remove();
+      }
+    });
+  });
+  
+  updateCameraStatus('🔄 Toque no botão para renovar token', 'info');
 }
 
 // Tratar erro na renovação
