@@ -3079,13 +3079,23 @@ function showQueueStatusFromFirebase(status) {
     return;
   }
   
-  // Criar ou encontrar o indicador
+// Criar ou encontrar o indicador NO RODAPÉ
   let indicator = document.getElementById('queue-status-indicator');
   if (!indicator) {
     indicator = document.createElement('div');
     indicator.id = 'queue-status-indicator';
     indicator.className = 'queue-status-indicator';
-    document.body.appendChild(indicator);
+    
+    // Inserir no rodapé entre desconectar e última foto
+    const tabletFooter = document.querySelector('.tablet-footer');
+    const photoCount = document.querySelector('.photo-count');
+    
+    if (tabletFooter && photoCount) {
+      tabletFooter.insertBefore(indicator, photoCount);
+      console.log('[INDICATOR] Criado no rodapé do tablet');
+    } else {
+      document.body.appendChild(indicator); // Fallback
+    }
   }
   
   console.log(`[QUEUE-INDICATOR] Status: ${status}`);
