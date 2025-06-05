@@ -651,7 +651,8 @@ function handlePhotoStatusChange(photoStatus) {
   
   switch(photoStatus) {
     case 'capturing':
-      // Just update status, don't touch counter
+      // MODO SILENCIOSO: Esconder TODOS os indicadores durante foto
+      hideAllIndicatorsDuringPhoto();
       break;
     case 'captured': 
       // Increment counter ONLY in this state
@@ -660,6 +661,9 @@ function handlePhotoStatusChange(photoStatus) {
       if (domElements.tablet.photoCount) {
         domElements.tablet.photoCount.textContent = appState.photoCount;
       }
+      
+      // PERMITIR AVISOS NOVAMENTE após foto capturada
+      enableIndicatorsAfterPhoto();
       
       // Resetear inmediatamente
       resetTabletDisplay();
@@ -2500,8 +2504,23 @@ function handleTokenExpiration() {
 }
 
 function showTokenWarning(minutesLeft) {
+  // EVITAR SPAM: Só avisar uma vez por sessão
+  if (appState.tokenWarningShown) {
+    console.log(`[TOKEN] Aviso já mostrado - ignorando (${minutesLeft} min restantes)`);
+    return;
+  }
+  
+  // Marcar como mostrado
+  appState.tokenWarningShown = true;
+  
+  // Enviar notificação UMA VEZ
   addTabletNotification('warning', `El token expira en ${minutesLeft} minutos`);
-  console.log(`[TOKEN] Aviso de expiração - ${minutesLeft} minutos restantes`);
+  console.log(`[TOKEN] Aviso de expiração mostrado UMA VEZ - ${minutesLeft} minutos restantes`);
+  
+  // Resetar flag após 5 minutos para permitir novo aviso se necessário
+  setTimeout(() => {
+    appState.tokenWarningShown = false;
+  }, 5 * 60 * 1000);
 }
 
 // ===== SISTEMA DE NOTIFICAÇÕES DO TABLET =====
@@ -3054,6 +3073,12 @@ function showQueueStatusFromFirebase(status) {
   // Só funciona no modo tablet
   if (appState.currentMode !== 'tablet') return;
   
+  // RESPEITAR modo silencioso durante foto
+  if (photoSilenceMode) {
+    console.log(`[SILENCE] 🔇 Indicador bloqueado durante foto (status: ${status})`);
+    return;
+  }
+  
   // Criar ou encontrar o indicador
   let indicator = document.getElementById('queue-status-indicator');
   if (!indicator) {
@@ -3138,4 +3163,55 @@ function showQueueStatusFromFirebase(status) {
         indicator.style.display = 'none';
       }
   }
+}
+
+// Sistema de silêncio durante foto
+let photoSilenceMode = false;
+
+// Esconder todos os indicadores durante foto
+function hideAllIndicatorsDuringPhoto() {
+  photoSilenceMode = true;
+  console.log('[SILENCE] 📷 Modo silencioso ATIVADO - escondendo avisos durante foto');
+  
+  // Esconder indicador de fila
+  const indicator = document.getElementById('queue-status-indicator');
+  if (indicator) {
+    indicator.style.display = 'none';
+  }
+  
+  // Esconder notificações pequenas do tablet
+  const notifications = document.getElementById('tablet-notifications');
+  if (notifications) {
+    notifications.style.display = 'none';
+  }
+  
+  // Esconder alerta crítico se existir
+  const criticalAlert = document.getElementById('critical-alert-overlay');
+  if (criticalAlert) {
+    criticalAlert.style.display = 'none';
+  }
+}
+
+// Permitir avisos novamente após foto
+function enableIndicatorsAfterPhoto() {
+  // Aguardar 2 segundos após foto capturada para reativar avisos
+  setTimeout(() => {
+    photoSilenceMode = false;
+    console.log('[SILENCE] ✅ Modo silencioso DESATIVADO - avisos permitidos novamente');
+    
+    // Reativar notificações pequenas
+    const notifications = document.getElementById('tablet-notifications');
+    if (notifications) {
+      notifications.style.display = 'block';
+    }
+    
+    // Reativar alerta crítico se existir
+    const criticalAlert = document.getElementById('critical-alert-overlay');
+    if (criticalAlert) {
+      criticalAlert.style.display = 'block';
+    }
+    
+    // O indicador de fila será reativado quando houver novo status
+    
+  }, 2000); // 2 segundos de silêncio após captura
 }
