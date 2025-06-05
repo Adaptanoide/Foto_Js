@@ -669,6 +669,9 @@ function handlePhotoStatusChange(photoStatus) {
       }
       break;
     case 'queued':
+      // NOVO: Mostrar indicador quando foto entra na fila
+      showQueueStatusFromFirebase('queued');
+      
       // Just reset display, don't touch counter
       resetTabletDisplay();
       if (domElements.tablet.qrInput) {
@@ -677,14 +680,19 @@ function handlePhotoStatusChange(photoStatus) {
       }
       break;
     case 'uploading':
-      // No counter changes here
+      // NOVO: Atualizar indicador durante upload
+      showQueueStatusFromFirebase('uploading');
       break;
     case 'completed':
+      // NOVO: Esconder indicador quando completa
+      showQueueStatusFromFirebase('completed');
+      
       // DO NOT increment counter here
       console.log("Not incrementing in 'completed' state");
       break;
     case 'error':
-      // No counter changes here
+      // NOVO: Mostrar erro no indicador
+      showQueueStatusFromFirebase('error');
       break;
   }
 }
