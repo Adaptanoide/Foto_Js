@@ -1054,6 +1054,25 @@ function setupFirebaseForIphone() {
   if (!appState.tokenCheckInterval) {
     setupTokenMonitoring();
   }
+  
+  // NOVO: Escutar comandos de renovação de token
+  appState.firebaseRefs.status.on('value', (snapshot) => {
+    const data = snapshot.val();
+    
+    if (data && data.renewTokenRequest && data.renewTokenRequest.status === 'pending') {
+      console.log('[TOKEN-RENEWAL] 📥 Comando de renovação recebido do tablet');
+      handleAutomaticTokenRenewal();
+      
+      // Marcar como processado
+      appState.firebaseRefs.status.update({
+        renewTokenRequest: {
+          ...data.renewTokenRequest,
+          status: 'processing',
+          processedAt: firebase.database.ServerValue.TIMESTAMP
+        }
+      });
+    }
+  });
 }
 
 // Handler para nuevas solicitudes de foto
@@ -2478,13 +2497,14 @@ function handleTokenExpiration() {
 // Notificar tablet
   addTabletNotification('error', 'Autenticación expirada - Se requiere renovación');
   
-// NOVO: Enviar comando para tablet mostrar alerta crítico
+// NOVO: Enviar comando para tablet mostrar alerta crítico COM BOTÃO
   if (appState.firebaseRefs.status) {
     appState.firebaseRefs.status.update({
       showCriticalAlert: {
         title: 'Autenticación Expirada',
-        message: 'Las fotos están pausadas y seguras. Se requiere renovar la autenticación.',
-        instructions: '1. Vaya al iPhone<br>2. Haga clic para aprobar la autenticación<br>3. Regrese a la tablet - el sistema continuará automáticamente',
+        message: 'Las fotos están pausadas y seguras. Haga clic para renovar automáticamente.',
+        instructions: 'El sistema solicitará renovación en el iPhone automáticamente',
+        showRenewButton: true,
         timestamp: firebase.database.ServerValue.TIMESTAMP
       }
     });
@@ -2835,9 +2855,18 @@ function showCriticalAlert(title, message, instructions) {
       <div class="critical-alert-title">${title}</div>
       <div class="critical-alert-message">${message}</div>
       <div class="critical-alert-instructions">${instructions}</div>
-      <div class="critical-alert-status">Este mensaje desaparecerá automáticamente cuando se resuelva el problema</div>
+      <div class="critical-alert-buttons">
+        <button id="renew-token-btn" class="renew-token-button">🔄 Renovar Token Ahora</button>
+      </div>
+      <div class="critical-alert-status">O haga clic para renovar automáticamente</div>
     </div>
   `;
+  
+  // Adicionar event listener para o botão
+  const renewBtn = overlay.querySelector('#renew-token-btn');
+  if (renewBtn) {
+    renewBtn.addEventListener('click', handleTokenRenewalRequest);
+  }
   
   document.body.appendChild(overlay);
   console.log('[CRITICAL-ALERT] Alerta crítico mostrado:', title);
@@ -3224,4 +3253,109 @@ function enableIndicatorsAfterPhoto() {
     // O indicador de fila será reativado quando houver novo status
     
   }, 2000); // 2 segundos de silêncio após captura
+}
+
+// Renovação de token via clique no tablet
+function handleTokenRenewalRequest() {
+  console.log('[TOKEN-RENEWAL] 🔄 Solicitação de renovação iniciada pelo tablet');
+  
+  // Desabilitar botão durante processo
+  const renewBtn = document.getElementById('renew-token-btn');
+  if (renewBtn) {
+    renewBtn.disabled = true;
+    renewBtn.innerHTML = '⏳ Renovando...';
+  }
+  
+  // Enviar comando para iPhone renovar token
+  if (appState.firebaseRefs.status) {
+    appState.firebaseRefs.status.update({
+      renewTokenRequest: {
+        timestamp: firebase.database.ServerValue.TIMESTAMP,
+        requestedBy: 'tablet',
+        status: 'pending'
+      }
+    });
+    
+    console.log('[TOKEN-RENEWAL] 📤 Comando enviado para iPhone');
+    
+    // Mostrar feedback no tablet
+    addTabletNotification('info', 'Solicitando renovación de token al iPhone...');
+  }
+}
+
+// Renovação automática de token solicitada pelo tablet
+function handleAutomaticTokenRenewal() {
+  console.log('[TOKEN-RENEWAL] 🔄 Iniciando renovação automática solicitada pelo tablet');
+  
+  // Notificar tablet que está processando
+  if (appState.firebaseRefs.status) {
+    appState.firebaseRefs.status.update({
+      renewTokenRequest: {
+        status: 'processing',
+        message: 'Abriendo popup de autenticación...',
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      }
+    });
+  }
+  
+  // Status no iPhone
+  updateCameraStatus('🔄 Renovando token...', 'info');
+  
+  try {
+    if (appState.tokenClient) {
+      // Tentar renovação com prompt
+      appState.tokenClient.requestAccessToken({
+        prompt: 'consent',
+        callback: (tokenResponse) => {
+          if (tokenResponse && tokenResponse.access_token) {
+            console.log('[TOKEN-RENEWAL] ✅ Renovação bem-sucedida via tablet!');
+            
+            // Processar token normalmente
+            handleTokenResponse(tokenResponse);
+            
+            // Notificar tablet do sucesso
+            addTabletNotification('success', '✅ Token renovado com sucesso!');
+            
+            // Limpar comando de renovação
+            appState.firebaseRefs.status.update({
+              renewTokenRequest: null
+            });
+            
+            updateCameraStatus('✅ Token renovado com sucesso!', 'success');
+            
+          } else {
+            handleTokenRenewalError('Token não recebido');
+          }
+        },
+        error_callback: (error) => {
+          handleTokenRenewalError(error.message || 'Erro na autenticação');
+        }
+      });
+    } else {
+      handleTokenRenewalError('Cliente de token não disponível');
+    }
+  } catch (error) {
+    handleTokenRenewalError('Erro ao iniciar renovação: ' + error.message);
+  }
+}
+
+// Tratar erro na renovação
+function handleTokenRenewalError(errorMessage) {
+  console.error('[TOKEN-RENEWAL] ❌ Erro na renovação:', errorMessage);
+  
+  // Notificar tablet do erro
+  addTabletNotification('error', `❌ Erro na renovação: ${errorMessage}`);
+  
+  // Reativar botão no tablet
+  if (appState.firebaseRefs.status) {
+    appState.firebaseRefs.status.update({
+      renewTokenRequest: {
+        status: 'error',
+        error: errorMessage,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      }
+    });
+  }
+  
+  updateCameraStatus('❌ Erro na renovação de token', 'error');
 }

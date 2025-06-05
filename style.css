@@ -1627,3 +1627,34 @@ body.portrait-warning #orientation-warning {
     max-width: none;
   }
 }
+
+/* Botão de renovação de token */
+.critical-alert-buttons {
+  margin: 24px 0 16px 0;
+  text-align: center;
+}
+
+.renew-token-button {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+  border: none;
+  padding: 16px 32px;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+  transition: all 0.3s ease;
+  min-width: 200px;
+}
+
+.renew-token-button:hover {
+  background: linear-gradient(135deg, #45a049, #3d8b40);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
+}
+
+.renew-token-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
