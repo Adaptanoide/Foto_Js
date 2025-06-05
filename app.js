@@ -3048,3 +3048,94 @@ function setupAutoSave() {
   
   console.log('[AUTO-SAVE] Sistema de salvamento agressivo ativado');
 }
+
+// Mostrar status da fila baseado em Firebase
+function showQueueStatusFromFirebase(status) {
+  // Só funciona no modo tablet
+  if (appState.currentMode !== 'tablet') return;
+  
+  // Criar ou encontrar o indicador
+  let indicator = document.getElementById('queue-status-indicator');
+  if (!indicator) {
+    indicator = document.createElement('div');
+    indicator.id = 'queue-status-indicator';
+    indicator.className = 'queue-status-indicator';
+    document.body.appendChild(indicator);
+  }
+  
+  console.log(`[QUEUE-INDICATOR] Status: ${status}`);
+  
+  switch(status) {
+    case 'queued':
+      // Foto entrou na fila
+      indicator.className = 'queue-status-indicator active';
+      indicator.innerHTML = `
+        <div class="queue-indicator-content">
+          <div class="queue-indicator-icon">📤</div>
+          <div class="queue-indicator-text">
+            <div class="queue-count">Foto en cola</div>
+            <div class="queue-warning">💾 Preparando upload...</div>
+          </div>
+        </div>
+      `;
+      indicator.style.display = 'block';
+      break;
+      
+    case 'uploading':
+      // Foto subindo
+      indicator.className = 'queue-status-indicator active';
+      indicator.innerHTML = `
+        <div class="queue-indicator-content">
+          <div class="queue-indicator-icon">⬆️</div>
+          <div class="queue-indicator-text">
+            <div class="queue-count">Subiendo foto</div>
+            <div class="queue-warning">⚠️ NO CIERRE el sistema</div>
+          </div>
+        </div>
+      `;
+      indicator.style.display = 'block';
+      break;
+      
+    case 'completed':
+      // Upload completo - mostrar sucesso e esconder
+      indicator.className = 'queue-status-indicator safe';
+      indicator.innerHTML = `
+        <div class="queue-indicator-content">
+          <div class="queue-indicator-icon">✅</div>
+          <div class="queue-indicator-text">
+            <div class="queue-count">¡Foto enviada!</div>
+          </div>
+        </div>
+      `;
+      indicator.style.display = 'block';
+      
+      // Auto-esconder após 2 segundos
+      setTimeout(() => {
+        if (indicator) {
+          indicator.style.display = 'none';
+        }
+      }, 2000);
+      break;
+      
+    case 'error':
+      // Erro no upload
+      indicator.className = 'queue-status-indicator critical';
+      indicator.innerHTML = `
+        <div class="queue-indicator-content">
+          <div class="queue-indicator-icon">❌</div>
+          <div class="queue-indicator-text">
+            <div class="queue-count">Error en upload</div>
+            <div class="queue-warning">Intentando de nuevo...</div>
+          </div>
+        </div>
+      `;
+      indicator.style.display = 'block';
+      break;
+      
+    default:
+      // Esconder indicador
+      if (indicator) {
+        indicator.style.display = 'none';
+      }
+  }
+}
