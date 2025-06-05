@@ -2642,11 +2642,11 @@ async function saveQueueToStorage() {
           await appState.firebaseRefs.status.update({
             queueBackup: {
               queue: appState.photoQueue.map(item => ({
-                fileName: item.fileName,
-                codeNumber: item.codeNumber,
-                attempts: item.attempts,
-                timestamp: item.timestamp
-              })), // Remove blob para Firebase
+                fileName: item.fileName || 'unknown.jpg',
+                codeNumber: item.codeNumber || '00000',
+                attempts: item.attempts || 0,
+                timestamp: item.timestamp || Date.now()
+              })), // Remove blob e trata campos undefined
               timestamp: firebase.database.ServerValue.TIMESTAMP,
               sessionCode: appState.connectionCode
             }
@@ -2893,7 +2893,7 @@ async function clearQueueFromIndexedDB() {
   }
 }
 
-// Atualizar indicador visual da fila no tablet
+// Atualizar indicador visual da fila no tablet - VERSÃO ESTRATÉGICA
 function updateQueueIndicator() {
   // Só funciona no modo tablet
   if (appState.currentMode !== 'tablet') return;
@@ -2909,48 +2909,67 @@ function updateQueueIndicator() {
     document.body.appendChild(indicator);
   }
   
+  // LÓGICA ESTRATÉGICA: Só mostrar quando realmente necessário
+  if (queueSize >= 3) {
+    // CRÍTICO: 3+ fotos - mostrar imediatamente
+    showQueueIndicator(indicator, queueSize, 'critical');
+  } else if (queueSize >= 1) {
+    // MODERADO: 1-2 fotos - mostrar com delay para não atrapalhar
+    setTimeout(() => {
+      // Só mostrar se ainda tem fotos após 5 segundos
+      if (appState.photoQueue && appState.photoQueue.length >= 1) {
+        showQueueIndicator(indicator, appState.photoQueue.length, 'normal');
+      }
+    }, 5000);
+  } else {
+    // SEGURO: Sem fotos - mostrar "ok" brevemente
+    showQueueIndicator(indicator, 0, 'safe');
+  }
+}
+
+// Função auxiliar para mostrar indicador
+function showQueueIndicator(indicator, queueSize, level) {
   if (queueSize > 0) {
-    // Tem fotos na fila - mostrar aviso crítico
-    indicator.className = 'queue-status-indicator active';
+    const isCritical = level === 'critical';
+    indicator.className = `queue-status-indicator active ${isCritical ? 'critical' : ''}`;
     indicator.innerHTML = `
       <div class="queue-indicator-content">
-        <div class="queue-indicator-icon">📤</div>
+        <div class="queue-indicator-icon">${isCritical ? '🚨' : '📤'}</div>
         <div class="queue-indicator-text">
           <div class="queue-count">${queueSize} foto${queueSize > 1 ? 's' : ''} subiendo</div>
-          <div class="queue-warning">⚠️ NO CIERRE el sistema</div>
+          <div class="queue-warning">${isCritical ? '⚠️ NO CIERRE' : '💾 Guardando...'}</div>
         </div>
       </div>
     `;
     
-    // Adicionar pulsação se muitas fotos
-    if (queueSize >= 5) {
-      indicator.classList.add('critical');
-    } else {
-      indicator.classList.remove('critical');
+    // Auto-esconder indicador normal após 8 segundos
+    if (level === 'normal') {
+      setTimeout(() => {
+        if (indicator && appState.photoQueue.length < 3) {
+          indicator.style.display = 'none';
+        }
+      }, 8000);
     }
-    
   } else {
-    // Fila vazia - mostrar status ok ou esconder
+    // Fila vazia - mostrar status ok brevemente
     indicator.className = 'queue-status-indicator safe';
     indicator.innerHTML = `
       <div class="queue-indicator-content">
         <div class="queue-indicator-icon">✅</div>
         <div class="queue-indicator-text">
           <div class="queue-count">Sistema seguro</div>
-          <div class="queue-safe">Puede cerrar si necesario</div>
         </div>
       </div>
     `;
     
-    // Auto-esconder após 3 segundos
+    // Auto-esconder após 2 segundos
     setTimeout(() => {
       if (indicator && appState.photoQueue.length === 0) {
         indicator.style.display = 'none';
       }
-    }, 3000);
+    }, 2000);
   }
   
-  // Mostrar indicador
   indicator.style.display = 'block';
 }
 
