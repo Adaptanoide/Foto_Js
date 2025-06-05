@@ -3302,9 +3302,9 @@ function handleAutomaticTokenRenewal() {
   showRenewalButtonOnIphone();
 }
 
-// Mostrar botão de renovação no iPhone
+// Mostrar instruções de renovação manual no iPhone
 function showRenewalButtonOnIphone() {
-  // Criar overlay com botão no iPhone
+  // Criar overlay com instruções claras
   const overlay = document.createElement('div');
   overlay.id = 'renewal-overlay';
   overlay.style.cssText = `
@@ -3313,7 +3313,7 @@ function showRenewalButtonOnIphone() {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.9);
     z-index: 9999;
     display: flex;
     justify-content: center;
@@ -3326,61 +3326,54 @@ function showRenewalButtonOnIphone() {
       padding: 30px;
       border-radius: 16px;
       text-align: center;
-      max-width: 300px;
+      max-width: 350px;
       width: 90%;
     ">
       <div style="font-size: 48px; margin-bottom: 16px;">🔄</div>
-      <h3 style="margin: 0 0 16px 0; color: #333;">Renovar Token</h3>
-      <p style="margin: 0 0 24px 0; color: #666;">Toque para aprovar la renovación</p>
-      <button id="iphone-renew-btn" style="
-        background: #4CAF50;
+      <h3 style="margin: 0 0 16px 0; color: #333;">Renovar Autenticación</h3>
+      <p style="margin: 0 0 20px 0; color: #666; line-height: 1.4;">
+        Haga clic en el botón <strong>Google Auth</strong> (👤) 
+        en la esquina superior derecha para renovar
+      </p>
+      <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <p style="margin: 0; font-size: 14px; color: #666;">
+          📍 Busque el ícono 👤 arriba a la derecha
+        </p>
+      </div>
+      <button id="iphone-close-btn" style="
+        background: #2196F3;
         color: white;
         border: none;
-        padding: 16px 32px;
-        border-radius: 12px;
-        font-size: 18px;
-        font-weight: bold;
+        padding: 12px 24px;
+        border-radius: 8px;
+        font-size: 16px;
         cursor: pointer;
         width: 100%;
-      ">Renovar Ahora</button>
+      ">Entendido</button>
     </div>
   `;
   
   document.body.appendChild(overlay);
   
-  // Event listener para o botão
-  const renewBtn = overlay.querySelector('#iphone-renew-btn');
-  renewBtn.addEventListener('click', () => {
-    renewBtn.disabled = true;
-    renewBtn.innerHTML = '⏳ Renovando...';
-    
-    // AGORA sim, tentar renovação (iniciada por clique do usuário)
-    appState.tokenClient.requestAccessToken({
-      prompt: 'consent',
-      callback: (tokenResponse) => {
-        if (tokenResponse && tokenResponse.access_token) {
-          console.log('[TOKEN-RENEWAL] ✅ Renovação bem-sucedida!');
-          handleTokenResponse(tokenResponse);
-          addTabletNotification('success', '✅ Token renovado com sucesso!');
-          
-          // Remover overlay
-          overlay.remove();
-          
-          // Limpar comando
-          appState.firebaseRefs.status.update({ renewTokenRequest: null });
-        } else {
-          handleTokenRenewalError('Token não recebido');
-          overlay.remove();
-        }
-      },
-      error_callback: (error) => {
-        handleTokenRenewalError(error.message || 'Erro na autenticação');
-        overlay.remove();
-      }
-    });
+  // Event listener para fechar
+  const closeBtn = overlay.querySelector('#iphone-close-btn');
+  closeBtn.addEventListener('click', () => {
+    overlay.remove();
+    updateCameraStatus('👆 Haga clic en el ícono 👤 para renovar', 'info');
   });
   
-  updateCameraStatus('🔄 Toque no botão para renovar token', 'info');
+  // Notificar tablet das instruções
+  if (appState.firebaseRefs.status) {
+    appState.firebaseRefs.status.update({
+      renewTokenRequest: {
+        status: 'manual_instruction',
+        message: 'Instrucciones mostradas en iPhone',
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      }
+    });
+  }
+  
+  addTabletNotification('info', 'Instrucciones enviadas al iPhone - usuario debe hacer clic en 👤');
 }
 
 // Tratar erro na renovação
