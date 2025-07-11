@@ -370,11 +370,16 @@ function handleConnectButtonClick() {
   connectToTablet(enteredCode);
 }
 
-// Empty function that does nothing - replaces updateDriveStatus
+// Sistema de status reativado para monitoramento
 function updateDriveStatus(state, message) {
-  // This function intentionally left empty
-  // All status update logic has been removed
-  return; // Just return immediately
+  // Log básico para debug
+  console.log(`🔍 Drive Status: ${state}${message ? ' - ' + message : ''}`);
+  
+  // Manter função ativa para futuras melhorias
+  const timestamp = new Date().toLocaleTimeString();
+  debugLog(`Status changed to: ${state}`, { message, timestamp });
+  
+  return;
 }
 
 // Mostrar error en la pantalla de entrada de código
