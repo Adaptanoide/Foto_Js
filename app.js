@@ -508,12 +508,12 @@ function setupIPhoneStatusListener() {
   const iphoneRef = appState.firebaseRefs.devices.child('iphone');
   iphoneRef.on('value', (snapshot) => {
     const iphoneData = snapshot.val();
-    
+
     if (iphoneData && iphoneData.connected) {
       handleIPhoneConnected();
     } else {
       handleIPhoneDisconnected();
-      
+
       // MOSTRAR ALERTA VERMELHO QUANDO IPHONE DESCONECTA
       if (appState.isConnected) { // Só mostrar se estava conectado antes
         showSystemErrorAlert();
@@ -558,6 +558,20 @@ function handleIPhoneConnected() {
       updateDriveStatus('waiting');
     }
   }, 2000);
+
+  // NOVO: ADICIONAR AQUI - Remover alerta de iPhone desconectado se existir
+  const iphoneAlert = document.getElementById('iphone-disconnected-alert');
+  if (iphoneAlert) {
+    iphoneAlert.remove();
+  }
+
+  // Reabilitar input do tablet
+  const tabletInput = document.getElementById('tablet-qr-input');
+  if (tabletInput) {
+    tabletInput.disabled = false;
+    tabletInput.placeholder = 'Scanner QR';
+    tabletInput.style.backgroundColor = ''; // Remover fundo vermelho
+  }
 }
 
 // Handler para iPhone desconectado
@@ -583,6 +597,9 @@ function handleIPhoneDisconnected() {
   }
 
   updateDriveStatus('error');
+
+  // NOVO: ALERTA GIGANTE QUANDO IPHONE DESCONECTA
+  showIPhoneDisconnectedAlert();
 }
 
 // Escuchar status de las fotos - Extraído para mejorar legibilidad
@@ -2258,4 +2275,114 @@ function createMultipartBody(metadata, base64Data) {
   body += `--${boundary}--`;
 
   return body;
+}
+
+// === ALERTA GIGANTE PARA IPHONE DESCONECTADO ===
+function showIPhoneDisconnectedAlert() {
+  // Remover alerta anterior se existir
+  const existingAlert = document.getElementById('iphone-disconnected-alert');
+  if (existingAlert) return; // Já está mostrando
+
+  // Criar alerta gigante específico para iPhone
+  const alert = document.createElement('div');
+  alert.id = 'iphone-disconnected-alert';
+  alert.innerHTML = `
+    <div class="error-overlay">
+      <div class="error-content">
+        <div class="error-icon">📱</div>
+        <h2>iPHONE DESCONECTADO</h2>
+        <p>El iPhone se ha desconectado del sistema.</p>
+        <p><strong>NO CONTINÚE ESCANEANDO</strong></p>
+        <p>Las fotos NO se guardarán.</p>
+        <div class="error-actions">
+          <button onclick="window.location.reload()" class="reload-btn">
+            🔄 RECARGAR Y RECONECTAR
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // CSS inline igual ao alerta de Firebase
+  alert.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(183, 28, 28, 0.95);
+    color: white;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: Arial, sans-serif;
+  `;
+
+  const content = alert.querySelector('.error-content');
+  content.style.cssText = `
+    text-align: center;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 40px;
+    border-radius: 20px;
+    max-width: 500px;
+    border: 3px solid #fff;
+  `;
+
+  const icon = alert.querySelector('.error-icon');
+  icon.style.cssText = `
+    font-size: 80px;
+    margin-bottom: 20px;
+    animation: shake 1s infinite;
+  `;
+
+  const h2 = alert.querySelector('h2');
+  h2.style.cssText = `
+    font-size: 32px;
+    margin: 20px 0;
+    color: #fff;
+  `;
+
+  const p = alert.querySelectorAll('p');
+  p.forEach(para => {
+    para.style.cssText = `
+      font-size: 18px;
+      margin: 15px 0;
+      color: #fff;
+    `;
+  });
+
+  const button = alert.querySelector('.reload-btn');
+  button.style.cssText = `
+    background: #fff;
+    color: #B71C1C;
+    border: none;
+    padding: 15px 30px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 20px;
+  `;
+
+  // Adicionar animação de shake ao ícone
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      75% { transform: translateX(10px); }
+    }
+  `;
+  document.head.appendChild(style);
+
+  document.body.appendChild(alert);
+
+  // TRAVAR o sistema - desabilitar input do tablet
+  const tabletInput = document.getElementById('tablet-qr-input');
+  if (tabletInput) {
+    tabletInput.disabled = true;
+    tabletInput.placeholder = 'iPHONE DESCONECTADO - NO ESCANEAR';
+    tabletInput.style.backgroundColor = '#ffcccb'; // Fundo vermelho claro
+  }
 }
