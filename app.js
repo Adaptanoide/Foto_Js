@@ -18,7 +18,7 @@ const PROCESSING_SIZE = 800;
 const AUTO_CAPTURE_DELAY = 2000;  // Reducido de 4000 a 2000
 
 // Estado de la aplicación - centralizado para mayor control
-const appState = {
+window.appState = {
   currentMode: null,
   sessionId: null,
   connectionCode: null,
