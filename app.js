@@ -177,7 +177,6 @@ window.addEventListener('DOMContentLoaded', () => {
       appState.firebaseRefs.sessions = sessionsRef;
       debugLog('Firebase inicializado con éxito');
       // NOVO: Verificar se há sessão anterior
-      setTimeout(checkSessionIntegrity, 2000);
     } catch (err) {
       console.error('Error al inicializar Firebase:', err);
       updateDriveStatus('error');
@@ -496,10 +495,6 @@ function setupFirebaseForTabletHost(code) {
     setupTabletQRInputListener();
 
     appState.isConnectedToFirebase = true;
-    // NOVO: Salvar sessão atual
-    localStorage.setItem('currentMode', 'tablet');
-    localStorage.setItem('connectionCode', code);
-    console.log(`Sessão salva: modo=tablet, código=${code}`);
     debugLog('Firebase configurado para host tablet con código:', code);
   } catch (err) {
     debugLog('Error al configurar host tablet en Firebase:', err, 'error');
@@ -508,16 +503,21 @@ function setupFirebaseForTabletHost(code) {
   }
 }
 
-// Escuchar status del iPhone - Extraído para mejorar legibilidad
+// Escuchar status del iPhone - com alerta de desconexão
 function setupIPhoneStatusListener() {
   const iphoneRef = appState.firebaseRefs.devices.child('iphone');
   iphoneRef.on('value', (snapshot) => {
     const iphoneData = snapshot.val();
-
+    
     if (iphoneData && iphoneData.connected) {
       handleIPhoneConnected();
     } else {
       handleIPhoneDisconnected();
+      
+      // MOSTRAR ALERTA VERMELHO QUANDO IPHONE DESCONECTA
+      if (appState.isConnected) { // Só mostrar se estava conectado antes
+        showSystemErrorAlert();
+      }
     }
   });
 }
@@ -2258,155 +2258,4 @@ function createMultipartBody(metadata, base64Data) {
   body += `--${boundary}--`;
 
   return body;
-}
-
-// === VERIFICAÇÃO DE INTEGRIDADE DA SESSÃO ===
-async function checkSessionIntegrity() {
-  const savedMode = localStorage.getItem('currentMode');
-  const savedCode = localStorage.getItem('connectionCode');
-
-  if (!savedMode || !savedCode) {
-    console.log('Sem sessão anterior, indo para device selection');
-    showScreen(domElements.screens.deviceSelection);
-    return;
-  }
-
-  if (savedMode !== 'tablet') {
-    console.log('Device não é tablet, sem verificação');
-    return;
-  }
-
-  console.log(`Verificando sessão anterior: ${savedCode}`);
-
-  try {
-    // Verificar se sessão existe no Firebase
-    const sessionRef = appState.firebaseRefs.sessions.child(savedCode);
-    const sessionSnapshot = await sessionRef.once('value');
-    const sessionData = sessionSnapshot.val();
-
-    if (!sessionData) {
-      console.log('Sessão expirou');
-      clearSessionAndRedirect('SESIÓN EXPIRADA', 'La sesión anterior ha expirado.');
-      return;
-    }
-
-    // Verificar iPhone
-    const iphoneData = sessionData.devices?.iphone;
-    const now = Date.now();
-    const iphoneLastSeen = iphoneData?.lastSeen || 0;
-    const timeDiff = now - iphoneLastSeen;
-
-    if (!iphoneData || !iphoneData.connected || timeDiff > 60000) {
-      console.log('iPhone desconectado');
-      clearSessionAndRedirect('iPhone DESCONECTADO', 'El iPhone se ha desconectado. Debe crear una nueva sesión.');
-      return;
-    }
-
-    // Sessão válida, restaurar
-    console.log('Sessão válida, restaurando...');
-    restoreTabletSession(savedCode);
-
-  } catch (error) {
-    console.error('Erro ao verificar sessão:', error);
-    clearSessionAndRedirect('ERROR DE CONEXIÓN', 'No se pudo verificar la sesión anterior.');
-  }
-}
-
-function clearSessionAndRedirect(title, message) {
-  // Limpar sessão
-  localStorage.removeItem('currentMode');
-  localStorage.removeItem('connectionCode');
-
-  // Mostrar alerta
-  showSessionAlert(title, message);
-
-  // Ir para device selection
-  setTimeout(() => {
-    showScreen(domElements.screens.deviceSelection);
-  }, 3000);
-}
-
-function showSessionAlert(title, message) {
-  const alert = document.createElement('div');
-  alert.id = 'session-alert';
-  alert.innerHTML = `
-    <div class="session-alert-content">
-      <div class="session-alert-icon">⚠️</div>
-      <h2>${title}</h2>
-      <p>${message}</p>
-      <p><strong>Creando nueva sesión...</strong></p>
-    </div>
-  `;
-
-  alert.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 152, 0, 0.95);
-    color: white;
-    z-index: 99999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: Arial, sans-serif;
-  `;
-
-  const content = alert.querySelector('.session-alert-content');
-  content.style.cssText = `
-    text-align: center;
-    background: rgba(0, 0, 0, 0.8);
-    padding: 40px;
-    border-radius: 20px;
-    max-width: 500px;
-    border: 3px solid #fff;
-  `;
-
-  const icon = alert.querySelector('.session-alert-icon');
-  icon.style.fontSize = '60px';
-
-  const h2 = alert.querySelector('h2');
-  h2.style.cssText = 'font-size: 24px; margin: 20px 0; color: #fff;';
-
-  const p = alert.querySelectorAll('p');
-  p.forEach(para => {
-    para.style.cssText = 'font-size: 16px; margin: 10px 0; color: #fff;';
-  });
-
-  document.body.appendChild(alert);
-
-  setTimeout(() => {
-    if (alert && alert.parentNode) {
-      alert.remove();
-    }
-  }, 3000);
-}
-
-function restoreTabletSession(code) {
-  console.log(`Restaurando sessão tablet: ${code}`);
-
-  appState.currentMode = 'tablet';
-  appState.connectionCode = code;
-
-  // Mostrar código no display
-  if (domElements.tabletCode.codeDisplay) {
-    domElements.tabletCode.codeDisplay.textContent = code;
-  }
-  if (domElements.tablet.sessionDisplay) {
-    domElements.tablet.sessionDisplay.textContent = code;
-  }
-
-  // Reconfigurar Firebase
-  setupFirebaseForTabletHost(code);
-
-  // Ir para tela principal do tablet
-  showScreen(domElements.screens.tablet);
-
-  // Focar input
-  setTimeout(() => {
-    if (domElements.tablet.qrInput) {
-      domElements.tablet.qrInput.focus();
-    }
-  }, 500);
 }
