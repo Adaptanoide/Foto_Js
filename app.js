@@ -24,6 +24,7 @@ const appState = {
   connectionCode: null,
   isConnected: false,
   isActiveSession: false,
+  iphoneWasConnected: false,
   firebaseRefs: {
     sessions: null,
     currentSession: null,
@@ -529,6 +530,9 @@ function setupIPhoneStatusListener() {
 function handleIPhoneConnected() {
   appState.isConnected = true;
 
+  // NOVO: Marcar que iPhone já conectou pelo menos uma vez
+  appState.iphoneWasConnected = true;
+
   // Actualizar status de conexión
   if (domElements.tabletCode.connectionStatus) {
     domElements.tabletCode.connectionStatus.innerHTML = `
@@ -601,8 +605,8 @@ function handleIPhoneDisconnected() {
 
   updateDriveStatus('error');
 
-  // SÓ MOSTRAR ALERTA SE ESTIVERMOS EM SESSÃO ATIVA ESPERANDO IPHONE
-  if (appState.currentMode === 'tablet' && appState.isConnectedToFirebase) {
+  // SÓ MOSTRAR ALERTA SE IPHONE JÁ ESTEVE CONECTADO E AGORA DESCONECTOU
+  if (appState.iphoneWasConnected && appState.currentMode === 'tablet') {
     showIPhoneDisconnectedAlert();
   }
 }
@@ -1125,8 +1129,8 @@ function disconnectFromFirebase() {
   appState.isConnectedToFirebase = false;
   appState.connectionCode = null;
   appState.isConnected = false;
-  // NOVO: Limpar flag de sessão ativa
   appState.isActiveSession = false;
+  appState.iphoneWasConnected = false;  // ← ADICIONAR
 
   debugLog('Desconectado de Firebase');
 }
