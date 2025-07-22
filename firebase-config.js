@@ -43,8 +43,8 @@ function initFirebase() {
     } else {
       console.warn('Desconectado de Firebase Realtime Database');
 
-      // SÓ MOSTRAR ALERTA SE ESTIVERMOS EM UMA SESSÃO ATIVA
-      if (window.appState && window.appState.isConnectedToFirebase) {
+      // MOSTRAR ALERTA SE HOUVER QUALQUER MODO ATIVO (tablet ou iphone)
+      if (window.appState && window.appState.currentMode) {
         showSystemErrorAlert();
       }
     }
