@@ -23,6 +23,7 @@ const appState = {
   sessionId: null,
   connectionCode: null,
   isConnected: false,
+  isActiveSession: false,
   firebaseRefs: {
     sessions: null,
     currentSession: null,
@@ -495,6 +496,8 @@ function setupFirebaseForTabletHost(code) {
     setupTabletQRInputListener();
 
     appState.isConnectedToFirebase = true;
+    // NOVO: Marcar que sessão está ativa e aguardando iPhone
+    appState.isActiveSession = true;
     debugLog('Firebase configurado para host tablet con código:', code);
   } catch (err) {
     debugLog('Error al configurar host tablet en Firebase:', err, 'error');
@@ -598,8 +601,10 @@ function handleIPhoneDisconnected() {
 
   updateDriveStatus('error');
 
-  // NOVO: ALERTA GIGANTE QUANDO IPHONE DESCONECTA
-  showIPhoneDisconnectedAlert();
+  // SÓ MOSTRAR ALERTA SE ESTIVERMOS EM SESSÃO ATIVA ESPERANDO IPHONE
+  if (appState.currentMode === 'tablet' && appState.isConnectedToFirebase) {
+    showIPhoneDisconnectedAlert();
+  }
 }
 
 // Escuchar status de las fotos - Extraído para mejorar legibilidad
@@ -1120,6 +1125,8 @@ function disconnectFromFirebase() {
   appState.isConnectedToFirebase = false;
   appState.connectionCode = null;
   appState.isConnected = false;
+  // NOVO: Limpar flag de sessão ativa
+  appState.isActiveSession = false;
 
   debugLog('Desconectado de Firebase');
 }

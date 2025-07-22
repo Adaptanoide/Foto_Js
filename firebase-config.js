@@ -35,14 +35,18 @@ function initFirebase() {
   // Verificar conexión con la base de datos
   const connectedRef = database.ref('.info/connected');
   connectedRef.on('value', (snap) => {
-    if (snap.val() === true) {
+    const isConnected = snap.val() === true;
+
+    if (isConnected) {
       console.log('Conectado a Firebase Realtime Database');
-      // Esconder alerta se estava mostrando
       hideSystemErrorAlert();
     } else {
       console.warn('Desconectado de Firebase Realtime Database');
-      // MOSTRAR ALERTA GRANDE E TRAVAR SISTEMA
-      showSystemErrorAlert();
+
+      // SÓ MOSTRAR ALERTA SE ESTIVERMOS EM UMA SESSÃO ATIVA
+      if (window.appState && window.appState.isConnectedToFirebase) {
+        showSystemErrorAlert();
+      }
     }
   });
 
