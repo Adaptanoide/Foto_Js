@@ -37,6 +37,11 @@ function initFirebase() {
   connectedRef.on('value', (snap) => {
     const isConnected = snap.val() === true;
 
+    // DEBUG TEMPORÁRIO
+    console.log('🔥 Firebase status:', isConnected);
+    console.log('🔥 appState exists:', !!window.appState);
+    console.log('🔥 currentMode:', window.appState?.currentMode);
+
     if (isConnected) {
       console.log('Conectado a Firebase Realtime Database');
       hideSystemErrorAlert();
