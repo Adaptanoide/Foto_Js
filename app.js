@@ -838,8 +838,8 @@ function processTabletQrCode(qrText) {
     const { fullNumber, idhCompleto } = extractQRCodeData(qrText);
 
     if (fullNumber && idhCompleto) {
-      // Mostrar los números
-      displayQrResult(idhCompleto, fullNumber);
+      // Mostrar los números (PADRONIZADO: sempre últimos 5 em destaque + IDH completo)
+      displayQrResult(fullNumber);
       appState.lastProcessedCode = idhCompleto;
       updateLastPhotoDisplay(idhCompleto);
 
@@ -933,14 +933,20 @@ function extractQRCodeData(qrText) {
 }
 
 // Mostrar resultado del QR en tablet
-function displayQrResult(mainNumber, fullNumber) {
+// PADRONIZADO: Sempre exibe últimos 5 dígitos em destaque + IDH completo embaixo
+function displayQrResult(fullNumber) {
   const { qrMainNumber, qrSecondaryInfo } = domElements.tablet;
 
+  // SEMPRE extrair últimos 5 dígitos do IDH completo para linha principal
+  const last5Digits = String(fullNumber).slice(-5);
+
   if (qrMainNumber) {
-    qrMainNumber.textContent = mainNumber;
+    // Linha grande: Últimos 5 dígitos (identificação rápida)
+    qrMainNumber.textContent = last5Digits;
   }
 
   if (qrSecondaryInfo) {
+    // Linha pequena: IDH completo (conferência)
     qrSecondaryInfo.textContent = fullNumber;
 
     // Eliminar cualquier clase de estado anterior
