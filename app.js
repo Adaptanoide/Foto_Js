@@ -180,29 +180,10 @@ function debugLog(message, data, level = 'info') {
 
 // === FUNCIONES DE VERSIONAMIENTO ===
 
-// Verificar si hay versión guardada
-function checkSavedVersion() {
-  try {
-    const savedVersion = localStorage.getItem(appState.versionStorageKey);
-    if (savedVersion === 'old' || savedVersion === 'new') {
-      appState.systemVersion = savedVersion;
-      return true;
-    }
-  } catch (err) {
-    console.warn('No se pudo leer versión guardada:', err);
-  }
-  return false;
-}
-
-// Guardar versión seleccionada
+// Guardar versión seleccionada (solo en memoria, NO en localStorage)
 function saveVersionSelection(version) {
-  try {
-    localStorage.setItem(appState.versionStorageKey, version);
-    appState.systemVersion = version;
-    debugLog('Versión seleccionada:', version);
-  } catch (err) {
-    console.error('Error al guardar versión:', err);
-  }
+  appState.systemVersion = version;
+  debugLog('Versión seleccionada para esta sesión:', version);
 }
 
 // Mostrar versión actual en la pantalla de dispositivos
@@ -246,18 +227,11 @@ function setupVersionSelectionButtons() {
 // Inicialización - Con manejo de errores mejorado
 window.addEventListener('DOMContentLoaded', () => {
   try {
-    // NUEVO: Verificar versión antes de continuar
+    // MODIFICADO: SIEMPRE mostrar pantalla de selección al inicio
     setupVersionSelectionButtons();
 
-    const hasVersion = checkSavedVersion();
-    if (!hasVersion) {
-      // Mostrar pantalla de selección de versión
-      showScreen(domElements.screens.versionSelection);
-    } else {
-      // Ya tiene versión guardada, ir directo a selección de dispositivo
-      showScreen(domElements.screens.deviceSelection);
-      updateVersionDisplay();
-    }
+    // Siempre mostrar pantalla de selección de versión
+    showScreen(domElements.screens.versionSelection);
 
     // Configuración de los listeners para botones
     setupDeviceSelectionButtons();
