@@ -1872,16 +1872,20 @@ function captureHighQualityImage(sourceElement, codeNumber) {
 
         let currentY = padding;
 
-        // Primeira linha (primeiros dígitos - menor)
+        // Primeira linha (primeiros dígitos - menor e CENTRALIZADA)
         if (firstDigits.length > 0) {
           ctx.font = `bold ${fontSizeSmall}px Arial, sans-serif`;
-          ctx.fillText(firstDigits, padding, currentY);
+          // Centralizar primeira linha em relação à largura do retângulo
+          const line1X = padding + ((maxWidth - line1Width) / 2);
+          ctx.fillText(firstDigits, line1X, currentY);
           currentY += fontSizeSmall + lineSpacing;
         }
 
-        // Segunda linha (últimos 5 dígitos - maior e em destaque)
+        // Segunda linha (últimos 5 dígitos - maior e em destaque, CENTRALIZADA)
         ctx.font = `bold ${fontSizeLarge}px Arial, sans-serif`;
-        ctx.fillText(last5Digits, padding, currentY);
+        // Centralizar segunda linha em relação à largura do retângulo
+        const line2X = padding + ((maxWidth - line2Width) / 2);
+        ctx.fillText(last5Digits, line2X, currentY);
       }
       // === FIM DO OVERLAY COM IDH ===
 
