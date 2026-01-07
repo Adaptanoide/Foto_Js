@@ -41,6 +41,8 @@ main {
   justify-content: center;
   align-items: center;
   z-index: 4000;
+  overflow-y: auto; /* Permitir scroll vertical */
+  -webkit-overflow-scrolling: touch; /* Scroll suave no iOS */
 }
 
 .version-container {
@@ -51,6 +53,7 @@ main {
   background-color: #fff;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   text-align: center;
+  margin: 20px 0; /* Adicionar margem vertical para mobile */
 }
 
 .version-container h1 {
@@ -88,6 +91,24 @@ main {
 @media (max-width: 768px) {
   .version-buttons {
     flex-direction: column;
+  }
+
+  .version-container {
+    padding: 20px;
+    margin: 20px 10px; /* Margem menor nas laterais para mobile */
+    max-width: calc(100% - 20px); /* Garantir que não ultrapasse a largura da tela */
+  }
+
+  .version-container h1 {
+    font-size: 24px; /* Título um pouco menor em mobile */
+  }
+
+  .migration-notice {
+    font-size: 14px; /* Texto um pouco menor em mobile */
+  }
+
+  .version-instructions {
+    font-size: 14px;
   }
 }
 
