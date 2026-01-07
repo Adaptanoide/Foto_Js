@@ -1827,32 +1827,61 @@ function captureHighQualityImage(sourceElement, codeNumber) {
         0, 0, canvas.width, canvas.height
       );
 
-      // === ADICIONAR IDH NO CANTO SUPERIOR ESQUERDO ===
+      // === ADICIONAR IDH NO CANTO SUPERIOR ESQUERDO (DUAS LINHAS) ===
       if (codeNumber) {
-        // Definir tamanho da fonte proporcional à altura da imagem (3% da altura)
-        const fontSize = Math.floor(canvas.height * 0.03);
-        const padding = Math.floor(fontSize * 0.4); // padding interno do retângulo
+        // Dividir o IDH em duas partes
+        const idhString = String(codeNumber);
+        const last5Digits = idhString.slice(-5); // Últimos 5 dígitos
+        const firstDigits = idhString.slice(0, -5); // Primeiros dígitos (se existirem)
 
-        // Configurar fonte
-        ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+        // Tamanhos de fonte
+        const fontSizeSmall = Math.floor(canvas.height * 0.02); // 2% para primeira linha (menor)
+        const fontSizeLarge = Math.floor(canvas.height * 0.04); // 4% para segunda linha (maior - destaque)
+        const padding = Math.floor(fontSizeLarge * 0.4);
+        const lineSpacing = Math.floor(fontSizeSmall * 0.2); // Espaçamento entre linhas
+
         ctx.textBaseline = 'top';
 
-        // Medir largura do texto
-        const textMetrics = ctx.measureText(codeNumber);
-        const textWidth = textMetrics.width;
-        const textHeight = fontSize;
+        // Medir larguras dos textos
+        let maxWidth = 0;
+        let line1Width = 0;
+        let line2Width = 0;
 
-        // Dimensões do retângulo branco (compacto - apenas o necessário)
-        const rectWidth = textWidth + (padding * 2);
-        const rectHeight = textHeight + (padding * 1.5);
+        // Primeira linha (primeiros dígitos - se existirem)
+        if (firstDigits.length > 0) {
+          ctx.font = `bold ${fontSizeSmall}px Arial, sans-serif`;
+          line1Width = ctx.measureText(firstDigits).width;
+          maxWidth = Math.max(maxWidth, line1Width);
+        }
+
+        // Segunda linha (últimos 5 dígitos - maior e em destaque)
+        ctx.font = `bold ${fontSizeLarge}px Arial, sans-serif`;
+        line2Width = ctx.measureText(last5Digits).width;
+        maxWidth = Math.max(maxWidth, line2Width);
+
+        // Calcular dimensões do retângulo
+        const rectWidth = maxWidth + (padding * 2);
+        const rectHeight = (firstDigits.length > 0 ? fontSizeSmall + lineSpacing : 0) + fontSizeLarge + (padding * 2);
 
         // Desenhar retângulo branco (bem colado no canto - sem margem)
         ctx.fillStyle = 'rgba(255, 255, 255, 0.95)'; // Branco quase opaco
         ctx.fillRect(0, 0, rectWidth, rectHeight);
 
-        // Desenhar texto preto sobre o retângulo
+        // Desenhar textos pretos sobre o retângulo
         ctx.fillStyle = '#000000'; // Preto puro
-        ctx.fillText(codeNumber, padding, padding);
+
+        let currentY = padding;
+
+        // Primeira linha (primeiros dígitos - menor)
+        if (firstDigits.length > 0) {
+          ctx.font = `bold ${fontSizeSmall}px Arial, sans-serif`;
+          ctx.fillText(firstDigits, padding, currentY);
+          currentY += fontSizeSmall + lineSpacing;
+        }
+
+        // Segunda linha (últimos 5 dígitos - maior e em destaque)
+        ctx.font = `bold ${fontSizeLarge}px Arial, sans-serif`;
+        ctx.fillText(last5Digits, padding, currentY);
       }
       // === FIM DO OVERLAY COM IDH ===
 
