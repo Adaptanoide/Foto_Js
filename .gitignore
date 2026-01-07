@@ -1,0 +1,21 @@
+# Claude Code
+.claude/
+
+# Node modules (se houver no futuro)
+node_modules/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Arquivos temporários
+*.tmp
+nul
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Backups
+*.backup
+*~

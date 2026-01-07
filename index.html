@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Scanner QR & Subida Drive</title>
+  <link rel="stylesheet" href="style.css"> 
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#ffffff">
+  
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  
+  <!-- Configuración de Firebase -->
+  <script src="firebase-config.js"></script>
+</head>
+<body>
+  <!-- NUEVA PANTALLA: Selección de Versión (Proceso de Migración) -->
+  <div id="version-selection-screen" class="screen">
+    <div class="version-container">
+      <h1>Sistema de Captura de Fotos</h1>
+      <p class="migration-notice">🔄 Proceso de Migración en Curso</p>
+      <p class="version-instructions">Seleccione la versión del sistema que desea utilizar:</p>
+
+      <div class="version-buttons">
+        <button id="version-old-btn" class="version-button version-old">
+          <div class="version-header">
+            <span class="version-label">Versión Antigua</span>
+            <span class="version-badge legacy">ACTUAL</span>
+          </div>
+          <div class="version-description">
+            <p><strong>Nombres de archivo:</strong> Últimos 5 dígitos del IDH</p>
+            <p><strong>Ejemplo:</strong> 67890.jpg</p>
+            <p><strong>Overlay en imagen:</strong> IDH completo visible</p>
+          </div>
+          <div class="version-note">✓ Compatible con sistema anterior</div>
+        </button>
+
+        <button id="version-new-btn" class="version-button version-new">
+          <div class="version-header">
+            <span class="version-label">Versión Nueva</span>
+            <span class="version-badge new">RECOMENDADA</span>
+          </div>
+          <div class="version-description">
+            <p><strong>Nombres de archivo:</strong> IDH completo</p>
+            <p><strong>Ejemplo:</strong> 1234567890.jpg</p>
+            <p><strong>Overlay en imagen:</strong> IDH completo visible</p>
+          </div>
+          <div class="version-note">⭐ Sistema mejorado y más completo</div>
+        </button>
+      </div>
+
+      <div class="migration-info">
+        <p><strong>Nota:</strong> Esta pantalla forma parte del proceso de migración del sistema.</p>
+        <p>Ambas versiones funcionan correctamente. La versión nueva será el estándar definitivo.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pantalla de selección de dispositivo -->
+  <div id="device-selection-screen" class="screen" style="display: none;">
+    <div class="welcome-container">
+      <div class="version-indicator">
+        <span id="current-version-display">Versión: --</span>
+      </div>
+      <h1>Seleccione el dispositivo</h1>
+
+      <div class="device-buttons">
+        <button id="tablet-select-btn" class="device-button tablet-button">
+          <span class="device-icon tablet-icon"></span>
+          Tablet
+        </button>
+
+        <button id="iphone-select-btn" class="device-button iphone-button">
+          <span class="device-icon iphone-icon"></span>
+          iPhone
+        </button>
+      </div>
+
+      <button id="change-version-btn" class="back-button">Cambiar Versión</button>
+    </div>
+  </div>
+
+  <!-- PANTALLA PARA TABLET - GENERACIÓN DE CÓDIGO -->
+  <div id="tablet-code-screen" class="screen" style="display: none;">
+    <div class="code-container">
+      <h2>Código de Conexión</h2>
+      <div class="connection-code" id="connection-code">------</div>
+      <p class="code-instructions">Ingrese este código en el iPhone para conectar los dispositivos</p>
+      
+      <div class="connection-status" id="tablet-connection-status">
+        <div class="status-indicator waiting"></div>
+        <span>Esperando conexión del iPhone...</span>
+      </div>
+      
+      <button id="generate-new-code-btn" class="secondary-button">Generar Nuevo Código</button>
+      <button id="tablet-code-back-btn" class="back-button">Volver</button>
+    </div>
+  </div>
+
+  <!-- PANTALLA PARA IPHONE - ENTRADA DE CÓDIGO -->
+  <div id="iphone-code-screen" class="screen" style="display: none;">
+    <div class="code-entry-container">
+      <h2>Conectar al Tablet</h2>
+      <p class="code-instructions">Ingrese el código mostrado en el tablet</p>
+      
+      <div class="code-input-area">
+        <input type="number" id="connection-code-input" placeholder="Ej: 123" min="100" max="999" pattern="[0-9]{3}" inputmode="numeric">
+        <button id="connect-btn" class="primary-button">Conectar</button>
+      </div>
+      
+      <div id="code-error-message" class="error-message" style="display: none;">
+        Código inválido. Por favor, intente nuevamente.
+      </div>
+      
+      <button id="iphone-code-back-btn" class="back-button">Volver</button>
+    </div>
+  </div>
+
+  <!-- Alerta de orientación -->
+  <div id="orientation-warning">
+    <div class="warning-content">
+      <div class="rotate-icon"></div>
+      <p>Gire su dispositivo al modo horizontal</p>
+    </div>
+  </div>
+
+  <!-- MODO TABLET - PRINCIPAL (Simplificado) -->
+  <div id="tablet-screen" class="screen" style="display: none;">
+    <div class="tablet-header">
+      <div class="session-info">
+        <span>Código: <strong id="tablet-session-display"></strong></span>
+        <div class="connection-status-badge">
+          <div class="status-dot"></div>
+          <span id="tablet-iphone-status">iPhone conectado</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="tablet-content">
+      <!-- Área de visualización del número QR - foco principal -->
+      <div class="qr-display-area">
+        <div class="qr-main-number" id="qr-main-number">-----</div>
+        <div class="qr-secondary-info" id="qr-secondary-info">---------</div>
+      </div>
+      
+      <!-- Área de input más discreta -->
+      <div class="tablet-input-area">
+        <input type="text" id="tablet-qr-input" placeholder="Scanner QR" autofocus>
+        <button id="tablet-clear-btn" class="action-button">Limpiar</button>
+      </div>
+      
+      <!-- Área de status discreta (mantenida para compatibilidad) -->
+      <div class="status-area">
+        <div class="status-message" id="tablet-status-message">Listo para escanear</div>
+        <div class="status-indicator">
+          <div class="status-light waiting"></div>
+          <span class="status-text" id="tablet-status-text">Esperando</span>
+        </div>
+      </div>
+    </div>
+    <div class="tablet-footer">
+      <button id="tablet-disconnect-btn" class="nav-button">Desconectar</button>
+      <div class="photo-count">
+        <span class="last-photo">Última: <span id="last-photo-code">-----</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODO IPHONE - LOGIN -->
+  <div id="login-screen" class="screen" style="display: none;">
+    <div class="login-container">
+      <h1>Escáner QR & Subida Drive</h1>
+      <p class="session-display">Conectado con el código: <strong id="login-session-display"></strong></p>
+      <p>Inicie sesión con su cuenta de Google para continuar</p>
+      <button id="login-btn" class="login-button" disabled>
+        <span class="google-icon"></span>
+        Iniciar Sesión con Google
+      </button>
+      <button id="iphone-disconnect-btn" class="back-button">Desconectar</button>
+    </div>
+  </div>
+
+  <!-- MODO IPHONE - CÁMARA -->
+  <div id="camera-screen" class="screen" style="display: none;">
+    <!-- Overlay de status para indicar uploads y éxitos -->
+    <div id="status-overlay" class="hidden">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Overlay de escaneo QR -->
+    <div id="scan-overlay">
+      <div id="scan-frame" class="scan-frame"></div>
+      <div class="scan-info">Esperando señal del tablet...</div>
+    </div>
+
+    <main>
+      <div class="camera-container">
+        <video id="camera" autoplay playsinline muted></video>
+      </div>
+
+      <div class="camera-header">
+        <div class="session-badge">
+          <span>Código: <strong id="camera-session-display"></strong></span>
+          <span class="connection-dot connected"></span>
+        </div>
+        
+        <!-- Status badge removido conforme solicitado -->
+        
+        <div class="action-container">
+          <div class="input-wrapper">
+            <input type="text" id="qr-input" placeholder="Código QR" readonly>
+            <button id="google-auth-btn" class="google-btn" title="Autenticación Google">
+              <div class="user-icon"></div>
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Mensaje de status simple para iPhone -->
+      <div class="status-message-simple" id="simple-status-message" style="display: none;">
+        Esperando foto...
+      </div>
+      
+      <!-- Canvas oculto para procesamiento -->
+      <canvas id="canvas"></canvas>
+    </main>
+  </div>
+
+  <!-- Ayuda sobre sistema de cola -->
+  <div id="queue-info-tooltip" class="queue-info-tooltip">
+    Fotos pendientes de subir. Puede continuar escaneando.
+  </div>
+
+  <!-- Script principal de la aplicación -->
+  <script src="app.js"></script>
+</body>
+</html>
